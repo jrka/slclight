@@ -16,7 +16,7 @@ from photutils import CircularAnnulus,CircularAperture,aperture_photometry
 
 # In[2]:
 
-dir=datdir+'images_raw_20170712_XHer'
+dir=datadir+'images_raw_20170712_XHer'
 rawfiles=['XHer-001V','XHer-002V','XHer-003V','XHer-004V','XHer-005V',
           'XHer-006V','XHer-007V','XHer-008V','XHer-009V','XHer-010V']
 darkfiles=['XHer-001Dark3','XHer-002Dark3','XHer-003Dark3','XHer-004Dark3','XHer-005Dark3',
