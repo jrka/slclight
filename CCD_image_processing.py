@@ -12,7 +12,8 @@ from astropy.io import fits
 from astropy.visualization import MinMaxInterval,SqrtStretch
 from astropy.visualization.mpl_normalize import ImageNormalize
 from matplotlib.patches import Circle
-get_ipython().magic(u'matplotlib inline')
+#get_ipython().magic(u'matplotlib inline')
+#Hello Julia and Nicole
 
 
 # # Define the files to be used
@@ -20,7 +21,7 @@ get_ipython().magic(u'matplotlib inline')
 
 # In[2]:
 
-dir='images_raw_20170712_XHer'
+dir='/Users/jkamenetzky3/data/images_raw_20170712_XHer'
 rawfiles=['XHer-001V','XHer-002V','XHer-003V','XHer-004V','XHer-005V',
           'XHer-006V','XHer-007V','XHer-008V','XHer-009V','XHer-010V']
 darkfiles=['XHer-001Dark3','XHer-002Dark3','XHer-003Dark3','XHer-004Dark3','XHer-005Dark3',
