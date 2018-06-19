@@ -6,7 +6,7 @@
 #
 # Data directory: This is the ONE line that will be custom to 
 # each individual person. Update it do reflect where your data is stored.
-datadir='/Users/jkamenetzky/data/'
+datadir='/Users/jkamenetzky3/data/'
 #
 # Import packages
 # General packages 
@@ -14,7 +14,3 @@ import numpy as np
 import matplotlib.pyplot as plt
 # Fits and photometry
 from astropy.io import fits
-from astropy.visualization import MinMaxInterval,SqrtStretch
-from astropy.visualization.mpl_normalize import ImageNormalize
-from matplotlib.patches import Circle
-from photutils import CircularAnnulus,CircularAperture,aperture_photometry
