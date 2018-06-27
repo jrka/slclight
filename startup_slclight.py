@@ -6,11 +6,15 @@
 #
 # Data directory: This is the ONE line that will be custom to 
 # each individual person. Update it do reflect where your data is stored.
-datadir='/Users/jkamenetzky3/data/'
+#datadir='/Users/jkamenetzky3/data/'
 #
 # Import packages
 # General packages 
 import numpy as np
 import matplotlib.pyplot as plt
 # Fits and photometry
+from astropy.modeling import models
+from astropy import units as u
+from astropy import nddata
 from astropy.io import fits
+import ccdproc

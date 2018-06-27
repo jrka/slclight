@@ -1,0 +1,30 @@
+# LIGHTDOME OBSERVING METADATA FILE
+# Use this file to record the information associated with a lightdome observation.
+# Lines beginning with "#" are commented out and will not be read.
+# You must follow this template, as the code will read associate each line with 
+# a certain piece of data.
+#
+# 1) Site Name
+Timpanogos Cave National Monument
+# 2) Latitude (in degrees North)
+40.42201
+# 3) Longitude (in degrees East)
+-111.69703
+# 4) Elevation (in meters)
+2582.0
+# 5) Date UTC in YYYY-MM-DD format
+2017-08-18
+# 6) Time UTC in HH:MM format
+05:00
+# 7) Camera
+Unknown
+# 8) Lens
+Unknown
+# 9) Observers
+Bob Meadows
+# 10) Air Temp (in degrees celsius)
+15.8
+# 11) Zenith SQM reading (magnitudes per square arcsecond)
+Unknown
+# 12) Comments (string; must be one line)
+Westminster College practice reducing NPS data. 
