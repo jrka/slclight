@@ -6,6 +6,9 @@
 # python lightdome_process.py lightdome_timpanogos
 #
 # Modification History
+# 2018-06-28 JRK: Create file of lights summary table, for 
+#     easy access to RA/Dec info for astrometry.net submission.
+#     Also added a '/' after "dir" directory for easier string addition.
 # 2018-06-27 JRK: Created file. Works on Timpanogos Cave files 
 #     from NPS, but we suspect they may have already been reduced!
 #     May have to change the fits header keys used for our data
@@ -14,12 +17,13 @@
 from startup_slclight import *
 from ccdproc import CCDData
 from ccdproc import ImageFileCollection
+from astropy.io import ascii
 
 if len(sys.argv)!=2:
    print('Usage:\npython lightdome_process.py [lightdome_NAME folder] \n')
    exit()
-dir='./data/'+sys.argv[2]
-#dir='./data/lightdome_timpanogos'
+dir='./data/'+sys.argv[2]+'/'
+#dir='./data/lightdome_timpanogos/'
 
 #--------------------------------
 
@@ -32,6 +36,8 @@ print 'Processing images from '+dir
 
 # Find all science images in the "lights" folder.
 files_l=ImageFileCollection(dir+'/lights/')
+# Write summary table to file for easy reference later
+ascii.write(files_l.summary,dir+'summary_lights.txt',format='fixed_width')
 
 # Check that all light exposures have the same exposure time.
 if len(np.unique(files_l.summary['exposure']))==1:
@@ -119,3 +125,4 @@ for filename in files_l.files_filtered(imagetyp='Light Frame'):
     ccd.write(dir+'/final/'+filename, clobber=True)
 
 print "Image reduction completed!"
+
