@@ -5,4 +5,5 @@ Assumes you have the following packages installed: astropy, numpy, ccdproc, phot
 May need to do: 
 `conda install -c astropy ccdproc`
 `conda install -c astropy photutils`
+`conda install -c astropy astroquery`
 

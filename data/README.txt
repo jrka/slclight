@@ -31,3 +31,4 @@ PROCEDURES AFTER SETTING UP THE 3 INITIAL THINGS ABOVE.
     renaming each one to match its original filename (e.g. ib030.fits).
     These new files have "World Coordinate System" (WCS) information, which allows
     us to identify stars by RA and Dec. 
+    Also download the "axy.fits" files, an rename as e.g. ib030_axy.fits
