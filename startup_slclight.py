@@ -29,7 +29,10 @@ import ccdproc
 # Query various catalogs for standard stars using Vizier,
 # and combine the results in a way that makes sense.
 def query_stars(centercoord,width):
-
+    from astroquery.vizier import Vizier
+    from astropy.table import vstack, Table, join
+    from astropy import coordinates as coords
+    
     Vizier.ROW_LIMIT=-1
 
     # Try Vizier, catalogs: II/183A is Landolt 1992, 
@@ -41,7 +44,7 @@ def query_stars(centercoord,width):
          #     'II/336/apass9', # AAVSO Photometric All Sky Survey (APASS) DR9 - HUGE
               ] 
 
-    result=Vizier.query_region(centercoord,width=[sep1*2,sep2*2],
+    result=Vizier.query_region(centercoord,width=width,
          catalog=catalogs)
     
     tbl=Table(names=('RA','DEC','Vmag','Source'),
@@ -76,8 +79,18 @@ def query_stars(centercoord,width):
             print 'Table type unrecognized by query_stars.'
          
     return tbl
-    
-    
+
+###########
+# Return the pixel scale reported by astrometry.net in the FITS header.
+def platescale(hdr):
+    # One of the COMMENT fields will look like this:
+    # COMMENT scale: 97.0455 arcsec/pix
+    # You don't want the one that says "Field scale"
+    pixscale=np.nan
+    for i,line in enumerate(hdr['COMMENT']):
+        if 'arcsec/pix' in line and 'Field' not in line: 
+            pixscale=np.float(line.split(' ')[1])
+    return pixscale
 
 
 

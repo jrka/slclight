@@ -11,6 +11,7 @@ Within each folder, you'll setup the following:
 After following procedures below, you'll produce 
 - final, a directory for the calibrated science images.
 - astrometry, a directory for results from astrometry.net
+- photometry, a directory which includes results from lightdome_photometry.py
 - results.txt, a file which summarizes the results, like the "photometric indicators"
   on the NPS Google Earth kml file. 
   
