@@ -55,9 +55,10 @@ from astropy.wcs import WCS
 from astropy import coordinates as coords
 from astropy.table import vstack, Table, join
 from astropy.time import Time
+from astropy.modeling import models, fitting
 
 if len(sys.argv)<2:
-    print('Usage:\npython lightdome_photometry.py lightdome_NAME folder [pixels] \n')
+    print('Usage:\npython lightdome_photometry.py lightdome_NAME_folder [pixels] \n')
     exit()
 npix=np.float(sys.argv[2]) if len(sys.argv)==3 else 1.0
     
@@ -77,6 +78,7 @@ for f in files.files:
     # Identify the sources. Use the ones from _axy.fits from astrometry.net
     hdu=fits.open(dir+'/astrometry/'+f.split('.')[0]+'_axy.fits')
     positions=[hdu[1].data['X'],hdu[1].data['Y']]
+    source_peak=hdu[1].data['flux']
     hdu.close()
     print 'astrometry.net found ',len(positions[0]),' sources.'
     # Load in the image file
@@ -91,14 +93,12 @@ for f in files.files:
     # compare final results of sky brightness with and without doing so.
     
     # Plotting: Show ALL identified sources.
-    norm=ImageNormalize(stretch=LogStretch())
+    norm=ImageNormalize(data=data,stretch=LogStretch())
     ax=plt.subplot()
     ax.imshow(data,cmap='Greys',origin='lower',norm=norm)
-    apertures_allsources=CircularAperture(positions,r=3) # pixels
+    apertures_allsources=CircularAperture(positions,r=10) # pixels
     apertures_allsources.plot(color='blue',lw=1.5,alpha=0.5)
     
-    
-        	
     # Try Vizier, catalogs: II/183A is Landolt 1992, 
     # J/AJ/146/131, Landolt 2013 with +50 deg declination.
     # I/239/hip_main is Hipparcos and Tycho catalogs
@@ -119,7 +119,6 @@ for f in files.files:
     # result=Vizier.query_region(centercoord,width=[sep1*2,sep2*2],
     #     catalog=['II/183A','J/AJ/146/131','I/239/hip_main'])
     
-        
     result=query_stars(centercoord,width=[sep1*2,sep2*2])
     
     if not result:
@@ -140,7 +139,7 @@ for f in files.files:
     apertures_catalog=CircularAperture(catalog.to_pixel(wcs),r=5)
     apertures_catalog.plot(color='red',lw=1.5,alpha=0.5)    
     # Save the image
-    plt.savefig(dir+'/photometry.png') 
+    plt.savefig(dir+'/photometry/photometry_'+f.split('.')[0]+'.png') 
     
     #http://docs.astropy.org/en/stable/coordinates/matchsep.html
     # Now idx are indices into catalog that are the closest objects to each of the 
@@ -161,29 +160,74 @@ for f in files.files:
         result=result[indnpix]
         catalog=catalog[indnpix]
         print 'Using ',len(result),' matches for photometry.'
-    
-    # Overplot with a new color.
-    apertures_catalog=CircularAperture(catalog.to_pixel(wcs),r=5)
-    apertures_catalog.plot(color='yellow',lw=1.5,alpha=0.5)     
-    # Note, this revelas that our 1 pixel range is actually  quite restrictive.
-    # I see, by eye, many possible matches.   
         
     # Limit ourselves to these matches then do the photometry!
     # And now, restrict our list of sources to only those that also 
     # now appear in the "results" table. np.unique(result['idx'])
     result['source_x']=positions[0][result['idx']]
     result['source_y']=positions[1][result['idx']]
+    result['source_peak']=source_peak[result['idx']]
     result['source_RA']=positions_wcs[0][result['idx']]*u.deg
     result['source_DEC']=positions_wcs[1][result['idx']]*u.deg
+    
+    # Further narrow down for reasonable values of source peak.
+    # Keep only ones that are bright stars (> 5 sigma from background)
+    # And likely not saturated. How to know? Assume the max pixel is saturated?
+    # Allow user to set his later? THIS IS NOT RIGHT, BECAUSE FLUX IS ALREADY BG SUBTRACTED.
+    idbright=np.where(np.logical_and(result['source_peak']>np.median(data)+5.0*np.std(data),
+        result['source_peak']<np.max(data)*0.9))[0]
+    print 'With brightness and saturation cutoff, using ',len(idbright),' for photometry.'
+    result=result[idbright]
+    catalog=catalog[idbright]
 
+    # Overplot with a new color.
+    apertures_catalog=CircularAperture(catalog.to_pixel(wcs),r=5)
+    apertures_catalog.plot(color='yellow',lw=1.5,alpha=0.5)     
+    # Note, this reveals that our 1 pixel range is actually  quite restrictive.
+    # I see, by eye, many possible matches.       
     
     
+    # Determine the FWHM of the sources, so that we can choose an 
+    # appropriate radius for the aperture. 
+    # http://docs.astropy.org/en/stable/modeling/
+    # Better way to do this than looping?
+    fit_g=fitting.LevMarLSQFitter()
+#    g=models.Gaussian2D(amplitude=result['source_peak'],x_mean=result['source_x'],
+#        y_mean=result['source_y'])
+    result['source_fwhm']=1.0
+    for i, row in enumerate(result):
+        g_init=models.Gaussian2D(row['source_peak'],row['source_x'],row['source_y'])
+        subset_inds=[np.rint(row['source_y']),np.rint(row['source_x'])]
+        yi,xi=np.indices(data.shape)
+        xi=xi[subset_inds[0]-5:subset_inds[0]+5,subset_inds[1]-5:subset_inds[1]+5]
+        yi=yi[subset_inds[0]-5:subset_inds[0]+5,subset_inds[1]-5:subset_inds[1]+5]
+        data_sub=data[subset_inds[0]-5:subset_inds[0]+5,subset_inds[1]-5:subset_inds[1]+5].copy().astype('float')
+        data_sub-=np.median(data)
+        g_result=fit_g(g_init,xi,yi,data_sub)
+            
+        # For Diagnostics
+        from mpl_toolkits.mplot3d import Axes3D
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.plot_wireframe(xi,yi,data_sub,color='blue',label='Data')
+        ax.plot_wireframe(xi,yi,g_result(xi,yi),color='red',label='Model')
+        
+        # Get FWHM by taking average of x and y standard deviations, multiply by 2.35
+        row['source_fwhm']=2.35*np.mean([g_result.x_stddev.value,g_result.y_stddev.value])
+
+    print 'Source FWHM, Min: ',np.min(result['source_fwhm']),', Max: ',np.max(result['source_fwhm'])
+    print 'Using average: ',np.mean(result['source_fwhm'])
+    apr=0.6731*np.mean(result['source_fwhm'])
     # Create the apertures of sources, with local background subtraction
     # NOTE FOR FUTURE REFERENCE: See Mommert 2017 for a discussion of
     # finding the optimum aperture radius using a curve of growth analysis
     # to maximize flux AND signal-to-noise ratio simultaneously. Also Howell 2000.
-    apertures=CircularAperture((result['source_x'],result['source_y']),r=3) # pixels
-    annulus_apertures=CircularAnnulus((result['source_x'],result['source_y']),r_in=6., r_out=8.)
+    # Optimum aperture radius as 0.6731 FWHM?
+    # compare this to what I was doing, using 3, 6, and 8 for circle, r_in, r_out.
+    apertures=CircularAperture((result['source_x'],result['source_y']),
+        r=apr) # pixels
+    annulus_apertures=CircularAnnulus((result['source_x'],result['source_y']),
+       r_in=apr+1.0, r_out=2.0*apr+1.0)
     
     # Can make it nice like http://docs.astropy.org/en/stable/visualization/wcsaxes/,
     #   save the files for future use.
@@ -223,7 +267,7 @@ for f in files.files:
     result.write(dir+'/photometry/'+f.split('.')[0]+'.txt',format='ascii.fixed_width')
     
     # Save the image
-    plt.savefig(dir+'/photometry.png')
+    plt.savefig(dir+'/photometry/photometry_'+f.split('.')[0]+'.png') 
     
     # Close the fits file.
     hdu.close()
