@@ -69,9 +69,9 @@ if len(files_c.files_filtered(imagetyp='Bias Frame'))==0:
 else:
     for filename in files_c.files_filtered(imagetyp='Bias Frame'):
         print files_c.location + filename
-    	ccd = CCDData.read(files_c.location + filename, unit = u.adu)
+        ccd = CCDData.read(files_c.location + filename, unit = u.adu)
     	#this has to be fixed as the bias section does not include the whole section that will be trimmed
-    	bias_list.append(ccd)
+        bias_list.append(ccd)
     master_bias = ccdproc.combine(bias_list, method='median')
     master_bias.write(dir+'/master_bias.fits', overwrite=True)
 
