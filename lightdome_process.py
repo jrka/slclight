@@ -6,6 +6,8 @@
 # python lightdome_process.py lightdome_timpanogos
 #
 # Modification History
+# 2018-07-02 JRK: Image type for flats may be "Flat Field" 
+#     or "Flat Frame". Change "clobber" to "overwrite"; deprecated.
 # 2018-06-28 JRK: Create file of lights summary table, for 
 #     easy access to RA/Dec info for astrometry.net submission.
 #     Also added a '/' after "dir" directory for easier string addition.
@@ -22,7 +24,7 @@ from astropy.io import ascii
 if len(sys.argv)!=2:
    print('Usage:\npython lightdome_process.py [lightdome_NAME folder] \n')
    exit()
-dir='./data/'+sys.argv[2]+'/'
+dir='./data/'+sys.argv[1]+'/'
 #dir='./data/lightdome_timpanogos/'
 
 #--------------------------------
@@ -71,23 +73,27 @@ else:
     	#this has to be fixed as the bias section does not include the whole section that will be trimmed
     	bias_list.append(ccd)
     master_bias = ccdproc.combine(bias_list, method='median')
-    master_bias.write(dir+'/master_bias.fits', clobber=True)
+    master_bias.write(dir+'/master_bias.fits', overwrite=True)
 
 # Create the flat fields (bias subtracted)
+# NPS data used 'Flat Frame' whereas South Physics used 'Flat Field'
 print "Creating master flat frame..."
 flat_list = []
-if len(files_c.files_filtered(imagetyp='Flat Frame'))==0:
+if len(files_c.files_filtered(imagetyp='Flat Frame'))==0 and len(files_c.files_filtered(imagetyp='Flat Field'))==0:
     print 'Zero flat frames were found. SKIPPING THIS STEP!'
     doflat=False
 else:
     doflat=True
-    for filename in files_c.files_filtered(imagetyp='Flat Frame'):
+    tmp1=files_c.files_filtered(imagetyp='Flat Frame')
+    tmp2=files_c.files_filtered(imagetyp='Flat Field')
+    flatfiles = tmp1 if len(tmp1)>0 else tmp2
+    for filename in flatfiles:
         print files_c.location + filename
         ccd = CCDData.read(files_c.location + filename, unit = u.adu)
         ccd = ccdproc.subtract_bias(ccd, master_bias)
         flat_list.append(ccd)
     master_flat= ccdproc.combine(flat_list, method='median')
-    master_flat.write(dir+'/master_flat.fits', clobber=True)
+    master_flat.write(dir+'/master_flat.fits', overwrite=True)
 
 # Master darks will be specific to the exposure time.
 # Check that we only have one!
@@ -104,7 +110,7 @@ else:
         # Don't bias subtract; keep the bias as part of the total subtraction form image
         dark_list.append(ccd)
     master_dark = ccdproc.combine(dark_list, method='median')
-    master_dark.write(dir+'/master_dark.fits', clobber=True)
+    master_dark.write(dir+'/master_dark.fits', overwrite=True)
     
 ###################### PROCESS THE SCIENCE IMAGES
 
@@ -122,7 +128,7 @@ for filename in files_l.files_filtered(imagetyp='Light Frame'):
     			data_exposure=exptime*u.s,dark_exposure=exptime*u.s) # Remember, dark includes bias.
     if doflat:
         ccd = ccdproc.flat_correct(ccd, master_flat)
-    ccd.write(dir+'/final/'+filename, clobber=True)
+    ccd.write(dir+'/final/'+filename, overwrite=True)
 
 print "Image reduction completed!"
 

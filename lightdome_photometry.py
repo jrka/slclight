@@ -4,11 +4,16 @@
 #
 # Example Usage:
 # python lightdome_photometry.py lightdome_timpanogos
+# python lightdome_photometry.py lightdome_timpanogos 2
+# Default number of pixels to allow matches with catalogs is 1; set a number 
+# after the directory to override this default.
 #
 # The CCD images must have the following headers:
-# 'DATE-OBS' in UTC, 'LONGITUD' and 'LATITUDE' in degrees,
-# 'ELEVATIO' in meters, 'EXPTIME' in seconds, 
 #  COMMENT with scale in arcsec/pixel (from astrometry.net)
+# 'DATE-OBS' in UTC, 'LONGITUD' and 'LATITUDE' in degrees,
+# 'ELEVATIO' in meters, 'EXPTIME' in seconds 
+#  If 'LONGITUD','LATITUDE',and 'ELEVATIO' are not present,
+#  will look for those in the metadata.txt file.
 #
 # OUTPUTS:
 # For each .fits file in the /astrometry directory, a fixed-width .txt
@@ -47,16 +52,18 @@ from photutils import CircularAperture,CircularAnnulus,aperture_photometry
 from astropy.visualization import LogStretch
 from astropy.visualization.mpl_normalize import ImageNormalize
 from astropy.wcs import WCS
-from astroquery.sdss import SDSS
 from astropy import coordinates as coords
 from astropy.table import vstack, Table, join
 from astropy.time import Time
 
-# if len(sys.argv)!=2:
-#    print('Usage:\npython lightdome_photometry.py [lightdome_NAME folder] \n')
-#    exit()
-# dir='./data/'+sys.argv[2]+'/'
-dir='./data/lightdome_timpanogos/'
+if len(sys.argv)<2:
+    print('Usage:\npython lightdome_photometry.py lightdome_NAME folder [pixels] \n')
+    exit()
+npix=np.float(sys.argv[2]) if len(sys.argv)==3 else 1.0
+    
+dirname=sys.argv[1]
+# dirname='lightdome_timpanogos'
+dir='./data/'+dirname+'/'
 
 ###################### READ IN FILE INFO
 
@@ -132,6 +139,8 @@ for f in files.files:
     # Plotting: Add all these catalog sources to the plot
     apertures_catalog=CircularAperture(catalog.to_pixel(wcs),r=5)
     apertures_catalog.plot(color='red',lw=1.5,alpha=0.5)    
+    # Save the image
+    plt.savefig(dir+'/photometry.png') 
     
     #http://docs.astropy.org/en/stable/coordinates/matchsep.html
     # Now idx are indices into catalog that are the closest objects to each of the 
@@ -142,15 +151,15 @@ for f in files.files:
     idx, d2d, d3d = catalog.match_to_catalog_sky(co)
     
     # Get the ones that are within 1 pixels of center.
-    ind1pix=np.where(d2d.to(u.arcsec)<(1.0*pixscale)*u.arcsec)[0]
-    if len(ind1pix)==0:
-        print 'No matched sources within ',1.0*pixscale,' arcseconds for ',f
+    indnpix=np.where(d2d.to(u.arcsec)<(npix*pixscale)*u.arcsec)[0]
+    if len(indnpix)==0:
+        print 'No matched sources within ',npix*pixscale,' arcseconds for ',f
         continue
     else:
         # Cut down our "result" table to only those that match
         result['idx']=idx
-        result=result[ind1pix]
-        catalog=catalog[ind1pix]
+        result=result[indnpix]
+        catalog=catalog[indnpix]
         print 'Using ',len(result),' matches for photometry.'
     
     # Overplot with a new color.
@@ -196,8 +205,15 @@ for f in files.files:
     
     # Getting altitude --> zenith angle --> airmass. 
     c = coords.SkyCoord(result['source_RA'],result['source_DEC'], frame='icrs')
-    loc = coords.EarthLocation(lat = hdu[0].header['LATITUDE']*u.deg, 
-        lon = hdu[0].header['LONGITUD']*u.deg, height = hdu[0].header['ELEVATIO']*u.m)
+    # 2018-07-02: The below works IF your headers use this convention!
+    # Read in the user-provided metadata file instead.
+    #loc = coords.EarthLocation(lat = hdu[0].header['LATITUDE']*u.deg, 
+    #    lon = hdu[0].header['LONGITUD']*u.deg, height = hdu[0].header['ELEVATIO']*u.m)
+    metad=read_metadata(dirname)
+    loc = coords.EarthLocation(lat = metad['lat']*u.deg, 
+        lon = metad['lon']*u.deg, height = metad['elev']*u.m)
+    # Note we DO want to use the fits header for the date and time of the observation,
+    # because the sky moves over time as the observations progress!
     time = Time(hdu[0].header['DATE-OBS'],scale='utc')
     cAltAz = c.transform_to(coords.AltAz(obstime = time, location = loc))
     # Add altitude result table.
@@ -205,6 +221,9 @@ for f in files.files:
     
     # Write the results file.
     result.write(dir+'/photometry/'+f.split('.')[0]+'.txt',format='ascii.fixed_width')
+    
+    # Save the image
+    plt.savefig(dir+'/photometry.png')
     
     # Close the fits file.
     hdu.close()
