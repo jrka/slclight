@@ -14,7 +14,6 @@ from matplotlib.patches import Rectangle,Wedge,Polygon
 #from astropy.time import Time
 from collections import OrderedDict
 
-
 # SET IMAGE PROPERTIES: WIDTH IN DEGREES AND HEIGHT IN DEGREES
 width=28.14
 height=18.76
@@ -50,11 +49,11 @@ print len(centers_zenith), 'layers of exposures at increasing altitude.'
 print np.sum([len(centers_layers[x]) for x in centers_layers]),' total images.'
 
 # Setup a polar plot.
-fig=figure()
+fig=plt.figure()
 ax=fig.add_axes([0.1,0.1,0.8,0.8],polar=True)
 ax.set_theta_zero_location=('N')
 ax.set_ylim(0,90)
-grid(True)
+plt.grid(True)
 ax.set_yticks(range(0,90+10,10))
 #yLabel = ['90', '', '', '60', '', '', '30', '', '', '']
 yLabel = ['', '', '', '', '', '', '', '', '', '']
@@ -88,9 +87,13 @@ for i,key in enumerate(centers_layers):
         polygon = Polygon(zip(theta,r),fill=False)
         ax.add_line(polygon)
 
+# Save the image.
 ax.set_title('Image Width = '+str(width)+' deg x '+str(height)+' deg')        
-plt.savefig('plan_targets_'+str(width)+'_'+str(width)+'.png')
+plt.savefig('plan_targets_'+str(width)+'_'+str(height)+'.png')
 
-file='plan_targets_'+str(width)+'_'+str(width)+'.txt')
+# Write the altitude, azimuth in a file.
+file='plan_targets_'+str(width)+'_'+str(height)+'.txt'
 with open(file,'w') as file:
-    file.write(pickle.dumps(centers_layers))
+    file.write('alt,az\n')
+    for i,key in enumerate(centers_layers):
+        for j in centers_layers[key]: file.write(str(key)+','+str(j)+'\n')
