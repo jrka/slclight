@@ -33,6 +33,9 @@
 #  alt: altitude of star, in degrees (0 = horizon, 90 = zenith)
 #
 # Modification History
+# 2018-07-10 JRK: Require a peak signal/background ratio of 3.0 for sources
+#                 detected by astrometry.net to be used for photometry.
+#                 Plotting modifications; save FWHM modeling results to PDF.
 # 2018-07-02 JRK: Perform photometry, get alt/az from coordinates and other
 #                 fits header information (location, elevation, date/time in UT).
 #                 Write each result table to a file in /photometry.
@@ -56,6 +59,9 @@ from astropy import coordinates as coords
 from astropy.table import vstack, Table, join
 from astropy.time import Time
 from astropy.modeling import models, fitting
+from matplotlib.ticker import LogLocator
+from setup_plotting import *
+from mpl_toolkits.mplot3d import Axes3D
 
 if len(sys.argv)<2:
     print('Usage:\npython lightdome_photometry.py lightdome_NAME_folder [pixels] \n')
@@ -74,13 +80,29 @@ files=ImageFileCollection(dir+'/astrometry/',glob_exclude='*axy*')
 
 ###################### READ IN FILE INFO
 for f in files.files:
-    print f
+    print f,'==================================================='
     # Identify the sources. Use the ones from _axy.fits from astrometry.net
-    hdu=fits.open(dir+'/astrometry/'+f.split('.')[0]+'_axy.fits')
-    positions=[hdu[1].data['X'],hdu[1].data['Y']]
-    source_peak=hdu[1].data['flux']
+    try:
+        hdu=fits.open(dir+'/astrometry/'+f.split('.')[0]+'_axy.fits')
+        print 'astrometry.net found ',len(hdu[1].data['X']),' sources.'
+    except:
+        print 'Error finding or opening '+dir+'/astrometry/'+f.split('.')[0]+'_axy.fits.'
+        continue
+    
+    
+    # Do the cut here for sources that are very high signal to noise.
+    # Note, this is just the signal of the peak pixel; not the total
+    # integrated flux of the star. Use a S/N cut of 3.0 here.
+    indsn=np.where(hdu[1].data['flux']/hdu[1].data['background']>3.0)
+    positions=[hdu[1].data['X'][indsn],hdu[1].data['Y'][indsn]]
+    source_peak=hdu[1].data['flux'][indsn]
+    print 'Using a peak flux/background cutoff of 3.0 , now ',len(source_peak),' sources.'
     hdu.close()
-    print 'astrometry.net found ',len(positions[0]),' sources.'
+    
+    if len(source_peak)==0:
+        print 'No sources in ',f,', moving on to next file.'
+        continue
+    
     # Load in the image file
     hdu=fits.open(dir+'/astrometry/'+f)
     wcs=WCS(hdu[0].header)
@@ -94,10 +116,11 @@ for f in files.files:
     
     # Plotting: Show ALL identified sources.
     norm=ImageNormalize(data=data,stretch=LogStretch())
-    ax=plt.subplot()
-    ax.imshow(data,cmap='Greys',origin='lower',norm=norm)
+    fig,ax=plt.subplots(num=1)
+    cax=ax.imshow(data,cmap='Greys',origin='lower',norm=norm)
+    cbar=fig.colorbar(cax,ticks = LogLocator(subs=range(10)))
     apertures_allsources=CircularAperture(positions,r=10) # pixels
-    apertures_allsources.plot(color='blue',lw=1.5,alpha=0.5)
+    apertures_allsources.plot(color='blue',lw=1.5,alpha=0.5,label='Our Sources')
     
     # Try Vizier, catalogs: II/183A is Landolt 1992, 
     # J/AJ/146/131, Landolt 2013 with +50 deg declination.
@@ -109,37 +132,28 @@ for f in files.files:
     corner=wcs.wcs_pix2world(0,0,1)
     sep1=centercoord.separation(coords.SkyCoord(ra=corner[0],dec=center[1],unit="deg"))
     sep2=centercoord.separation(coords.SkyCoord(ra=center[0],dec=corner[1],unit="deg"))
-    # I don't seem to find any in the region for ib030.fits, 
-    # which is centered on 186. 2-1, 70.237,
-    # [<Angle 23.892974958515765 deg>, <Angle 19.945039907759938 deg>]
-    # The full catalog pulls up find, and i do get results if I look in a radius of 100 degrees,
-    # so I think the issue is the Dec is too high.
-    # Yes, the min dec is -46 degrees, the max dec is +16 degrees
-    # Add in J/AJ/146/131, which is +50 deg declination.
-    # result=Vizier.query_region(centercoord,width=[sep1*2,sep2*2],
-    #     catalog=['II/183A','J/AJ/146/131','I/239/hip_main'])
-    
+    # See query_stars for more information.    
     result=query_stars(centercoord,width=[sep1*2,sep2*2])
     
     if not result:
         print 'No standard stars found for ',f,', moving on to next file'
         continue # Skips the rest of this file, continues the loop to the next file.
     
-    # Limit to tables II/183A/table2 or J/AJ/146/131/standards
-    # J/AJ/146/131/standards colnames: __Vmag_ and RAJ2000, DEJ2000 (sexigesimal)
-    # II/183A/table2  colnames: Vmag, RAJ2000, DEJ2000 (sexigesimal). Error given, but not in other Landolt.
-    # Create apertures for these standard stars, so we can visualize? 
-    # How to determine which of our sources correspond?
-    positions_wcs=wcs.wcs_pix2world(positions[0],positions[1],1)
-    co=coords.SkyCoord(positions_wcs[0],positions_wcs[1],unit="deg")
+    # Put these coordinates into WCS
     catalog=coords.SkyCoord(ra=result['RA'],dec=result['DEC'],unit=u.deg)
     print len(catalog),' sources in catalog'
     
+    # Create apertures for these standard stars, so we can visualize? 
     # Plotting: Add all these catalog sources to the plot
-    apertures_catalog=CircularAperture(catalog.to_pixel(wcs),r=5)
+    # We will often get thousands; only do the 100 brightest ones.
+    apertures_catalog=CircularAperture(catalog[np.argsort(result['Vmag'])][0:100].to_pixel(wcs),r=5)
     apertures_catalog.plot(color='red',lw=1.5,alpha=0.5)    
     # Save the image
     plt.savefig(dir+'/photometry/photometry_'+f.split('.')[0]+'.png') 
+    
+    # Convert our sources to world coordinates.
+    positions_wcs=wcs.wcs_pix2world(positions[0],positions[1],1)
+    co=coords.SkyCoord(positions_wcs[0],positions_wcs[1],unit="deg")
     
     #http://docs.astropy.org/en/stable/coordinates/matchsep.html
     # Now idx are indices into catalog that are the closest objects to each of the 
@@ -169,60 +183,76 @@ for f in files.files:
     result['source_peak']=source_peak[result['idx']]
     result['source_RA']=positions_wcs[0][result['idx']]*u.deg
     result['source_DEC']=positions_wcs[1][result['idx']]*u.deg
-    
-    # Further narrow down for reasonable values of source peak.
-    # Keep only ones that are bright stars (> 5 sigma from background)
-    # And likely not saturated. How to know? Assume the max pixel is saturated?
-    # Allow user to set his later? THIS IS NOT RIGHT, BECAUSE FLUX IS ALREADY BG SUBTRACTED.
-    idbright=np.where(np.logical_and(result['source_peak']>np.median(data)+5.0*np.std(data),
-        result['source_peak']<np.max(data)*0.9))[0]
-    print 'With brightness and saturation cutoff, using ',len(idbright),' for photometry.'
-    result=result[idbright]
-    catalog=catalog[idbright]
 
     # Overplot with a new color.
     apertures_catalog=CircularAperture(catalog.to_pixel(wcs),r=5)
     apertures_catalog.plot(color='yellow',lw=1.5,alpha=0.5)     
     # Note, this reveals that our 1 pixel range is actually  quite restrictive.
     # I see, by eye, many possible matches.       
+    # This generally limits us to the center of the image, 
+    # where distortion is limited.
     
+    # Save the image, clear for next file.
+    plt.savefig(dir+'/photometry/photometry_'+f.split('.')[0]+'.png') 
+    plt.clf()
     
     # Determine the FWHM of the sources, so that we can choose an 
     # appropriate radius for the aperture. 
     # http://docs.astropy.org/en/stable/modeling/
     # Better way to do this than looping?
     fit_g=fitting.LevMarLSQFitter()
-#    g=models.Gaussian2D(amplitude=result['source_peak'],x_mean=result['source_x'],
-#        y_mean=result['source_y'])
     result['source_fwhm']=1.0
+    # Plot this as a PDF figure.
+    pdffile=dir+'/photometry/photometry_'+f.split('.')[0]+'_fwhm.pdf'
+    pdf=PdfPages(pdffile)
+    plt.clf()
+    
+    nb_plots_rows = 4 
+    nb_plots_columns = 3
+    nb_plots_per_page = nb_plots_rows*nb_plots_columns
+    grid_size = (nb_plots_rows, nb_plots_columns)
+    totplots=-1
+    
+    newlfd=latex_subplots(latexfd['full'],nb_plots_rows,nb_plots_columns,wspace=0,hspace=0)
+    fig,axes=plt.subplots(nb_plots_rows,nb_plots_columns,figsize=(newlfd['figw'],newlfd['figh']),num=0)
+    fig.subplots_adjust(top=newlfd['t'],right=newlfd['r'],bottom=newlfd['b'],left=newlfd['l'],wspace=newlfd['wspace'],hspace=newlfd['hspace'])
+
     for i, row in enumerate(result):
         g_init=models.Gaussian2D(row['source_peak'],row['source_x'],row['source_y'])
-        subset_inds=[np.rint(row['source_y']),np.rint(row['source_x'])]
+        subset_inds=[np.int(np.rint(row['source_y'])),np.int(np.rint(row['source_x']))]
         yi,xi=np.indices(data.shape)
         xi=xi[subset_inds[0]-5:subset_inds[0]+5,subset_inds[1]-5:subset_inds[1]+5]
         yi=yi[subset_inds[0]-5:subset_inds[0]+5,subset_inds[1]-5:subset_inds[1]+5]
         data_sub=data[subset_inds[0]-5:subset_inds[0]+5,subset_inds[1]-5:subset_inds[1]+5].copy().astype('float')
         data_sub-=np.median(data)
         g_result=fit_g(g_init,xi,yi,data_sub)
-            
-        # For Diagnostics
-        from mpl_toolkits.mplot3d import Axes3D
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-        ax.plot_wireframe(xi,yi,data_sub,color='blue',label='Data')
-        ax.plot_wireframe(xi,yi,g_result(xi,yi),color='red',label='Model')
+        
+        totplots+=1
+        if totplots % nb_plots_per_page==0:
+            plt.clf()
+            fig,axes=plt.subplots(nb_plots_rows,nb_plots_columns,figsize=(7,9),num=0)
+            #fig.subplots_adjust(wspace=0,hspace=0,top=0.98,right=0.87,bottom=0.08) # will move right.
+        axind=(np.int(np.floor((totplots % nb_plots_per_page)/np.float(nb_plots_columns))),  np.int(((totplots % nb_plots_per_page) % nb_plots_columns)))
+        axes[axind].remove()
+        axes[axind]=fig.add_subplot(nb_plots_rows,nb_plots_columns,totplots % nb_plots_per_page+1,projection='3d')
+        axes[axind].plot_wireframe(xi,yi,data_sub,color='blue',label='Data')
+        axes[axind].plot_wireframe(xi,yi,g_result(xi,yi),color='red',label='Model')
+        axes[axind].set_title('FWHM = '+str(2.35*np.mean([g_result.x_stddev.value,g_result.y_stddev.value])))
         
         # Get FWHM by taking average of x and y standard deviations, multiply by 2.35
         row['source_fwhm']=2.35*np.mean([g_result.x_stddev.value,g_result.y_stddev.value])
+    pdf.savefig()
+    pdf.close()
+    print pdffile
 
     print 'Source FWHM, Min: ',np.min(result['source_fwhm']),', Max: ',np.max(result['source_fwhm'])
-    print 'Using average: ',np.mean(result['source_fwhm'])
-    apr=0.6731*np.mean(result['source_fwhm'])
+    print 'Using median: ',np.median(result['source_fwhm'])
+    apr=3.0*np.mean(result['source_fwhm'])
     # Create the apertures of sources, with local background subtraction
     # NOTE FOR FUTURE REFERENCE: See Mommert 2017 for a discussion of
     # finding the optimum aperture radius using a curve of growth analysis
     # to maximize flux AND signal-to-noise ratio simultaneously. Also Howell 2000.
-    # Optimum aperture radius as 0.6731 FWHM?
+    # Optimum aperture radius as 0.6731 FWHM? Use 3.0 to be sure to get all flux.
     # compare this to what I was doing, using 3, 6, and 8 for circle, r_in, r_out.
     apertures=CircularAperture((result['source_x'],result['source_y']),
         r=apr) # pixels
@@ -234,8 +264,10 @@ for f in files.files:
     
     # Do aperture_photometry. Local background subtraction version,
     # http://photutils.readthedocs.io/en/stable/aperture.html#local-background-subtraction
+    # For an estimate of the error, assume all errors are Poisson and that
+    # the sky/source signal dominates the error. 
     apers=[apertures,annulus_apertures]
-    phot_table=aperture_photometry(data,apers)
+    phot_table=aperture_photometry(data,apers,error=np.sqrt(data.copy()))
     bkg_mean=phot_table['aperture_sum_1']/annulus_apertures.area()
     bkg_sum=bkg_mean*apertures.area()
     final_sum=phot_table['aperture_sum_0']-bkg_sum
@@ -264,10 +296,8 @@ for f in files.files:
     result['alt']=cAltAz.alt.degree*u.deg
     
     # Write the results file.
-    result.write(dir+'/photometry/'+f.split('.')[0]+'.txt',format='ascii.fixed_width')
-    
-    # Save the image
-    plt.savefig(dir+'/photometry/photometry_'+f.split('.')[0]+'.png') 
+    result.write(dir+'/photometry/'+f.split('.')[0]+'.txt',
+        format='ascii.fixed_width',overwrite=True)
     
     # Close the fits file.
     hdu.close()
