@@ -1,17 +1,16 @@
-from startup_slclight import *
-#from astropy.coordinates import SkyCoord
-#from astroplan import FixedTarget
-#from astroplan.plots import plot_sky
-import cPickle as pickle
+# Given an image width and height in degrees, where should the telescope be 
+# pointed to image the whole sky?
+#
+# To figure out the Field of View in degrees, you can use:
+# https://astronomy.tools/calculators/field_of_view/
+# (Click on Imaging Mode)
+# 
+# Use: edit "width" and height" below, then run the script
+# to produce a text file and image with pointings in altitude and azimuth.
 
+from startup_slclight import *
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Rectangle,Wedge,Polygon
-
-#import astropy.units as u
-#from astropy.coordinates import EarthLocation
-#from pytz import timezone
-#from astroplan import Observer
-#from astropy.time import Time
 from collections import OrderedDict
 
 # SET IMAGE PROPERTIES: WIDTH IN DEGREES AND HEIGHT IN DEGREES
@@ -27,13 +26,13 @@ nzenith=np.ceil(90.0/height)
 
 # Determine the center pointings for our horizon images. (in azimuth, degrees)
 centers_horiz=np.arange(0,360.0,360.0/nhorizon)
-# Determine center pointings for horizon to zenigth images (in altitude, degrees)
+# Determine center pointings for horizon to zenith images (in altitude, degrees)
 centers_zenith=np.arange(0.5*(90.0/nzenith),90.0,90.0/nzenith)
 
 # http://burro.case.edu/Academics/Astr306/Coordinates.pdf
 # For small separations, Delta(Dec) = (Dec2-Dec1)
 #     and Delta(RA)=(RA2-RA1)*Cos(Dec)
-
+# Determine the pointings required as one goes higher in altitude.
 centers_layers=OrderedDict()
 for i,alt in enumerate(centers_zenith):
     adjwidth=width/np.cos(alt*3.14/180.0)
@@ -43,6 +42,7 @@ for i,alt in enumerate(centers_zenith):
     centers_layers.update({str(alt):np.arange(0,360.0,adjwidth-nudge)})
     print len(centers_layers[str(alt)])
     
+# Report results
 print 'Calculation: '
 print len(centers_horiz),' exposures around horizon.'
 print len(centers_zenith), 'layers of exposures at increasing altitude.'
@@ -64,19 +64,8 @@ ax.set_yticklabels(yLabel)
 for i,key in enumerate(centers_layers):
     ax.plot([centers_layers[key]*3.14/180.0],[90.0-centers_zenith[i]],'r*')
     print [centers_layers[key]*3.14/180.0],[90.0-centers_zenith[i]]
-    # Rectangle(xy, width, height, angle=0.0, **kwargs
-    # Draw a rectangle with lower left at xy = (x, y) with specified width, 
-    # height and rotation angle.
-    #xarr=(centers_layers[key]-0.5*width)*3.14/180.0
-    #yarr=np.repeat(90.0-(centers_zenith[i]+0.5*height),len(xarr))
+
     for j in np.arange(len(centers_layers[key])):
- #       xy=(xarr[j],yarr[j])
- #       print xy
- #       rect=Rectangle(xy,width*3.14/180.0,height,edgecolor='k',fill=False)
-  #      patch=Wedge(xy,height,x-0.5*width*3.14/180.0,x+0.5*width*3.14/180.0,
-  #          ec='k',fc=None)
-  #      ax.add_patch(rect)
-        
         theta1=np.linspace((centers_layers[key][j]-0.5*width/np.cos(centers_zenith[i]*3.14/180.0))*3.14/180.0,
              (centers_layers[key][j]+0.5*width/np.cos(centers_zenith[i]*3.14/180.0))*3.14/180.0,10)
         theta2=np.flipud(theta1)

@@ -5,6 +5,8 @@
 # script.
 #
 # Revision History
+# 2018-07-10 JRK: Suppress warnings for metadata_conflicts when 
+#                 stacking tables in query_stars.
 # 2018-07-03 JRK: Added read_metadata to return a dictionary of 
 #                 info from the metadata file; helpful to use this
 #                 instead of fits headers for lat, long, and elevation,
@@ -30,6 +32,7 @@ from astropy import nddata
 from astropy.io import fits
 import ccdproc
 import sys
+from matplotlib.backends.backend_pdf import PdfPages
 
 
 ###########
@@ -64,7 +67,7 @@ def query_stars(centercoord,width):
             tmp.rename_column('RAICRS','RA')
             tmp.rename_column('DEICRS','DEC')
             tmp['Source']='I/239/hip_main'
-            tbl=vstack([tbl,tmp])
+            tbl=vstack([tbl,tmp],metadata_conflicts='silent')
         elif result.keys()[i]=='II/183A/table2':
             # I think these are too dim anyway... shrug.
             tmp=result[i]['RAJ2000','DEJ2000','Vmag']
@@ -72,7 +75,7 @@ def query_stars(centercoord,width):
             tmp['RA']=coords.Angle(tmp['RAJ2000'],unit=u.hour).degree
             tmp['DEC']=coords.Angle(tmp['DEJ2000'],unit=u.degree).degree
             tmp['Source']='II/183A/table2'
-            tbl=vstack([tbl,tmp['RA','DEC','Vmag','Source']])
+            tbl=vstack([tbl,tmp['RA','DEC','Vmag','Source']],metadata_conflicts='silent')
         elif result.keys()[i]=='J/AJ/146/131/standards':
             # I think these are too dim anyway... shrug.
             tmp=result[i]['RAJ2000','DEJ2000','__Vmag_']
@@ -81,7 +84,7 @@ def query_stars(centercoord,width):
             tmp['DEC']=coords.Angle(tmp['DEJ2000'],unit=u.degree).degree
             tmp.rename_column('__Vmag_','Vmag')
             tmp['Source']='J/AJ/146/131/standards'
-            tbl=vstack([tbl,tmp['RA','DEC','Vmag','Source']])            
+            tbl=vstack([tbl,tmp['RA','DEC','Vmag','Source']],metadata_conflicts='silent')            
         else: 
             print 'Table type unrecognized by query_stars.'
          
