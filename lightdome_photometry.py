@@ -29,10 +29,14 @@
 #  source_RA: conversion of x,y columns to RA using astrometry.net WCS
 #  source_DEC: conversion of x,y columns to Dec using astrometry.net WCS
 #  residual_aperture_sum: background-subtracted total sum (in DN) of photometry
+#  residual_aperture_sum_err: 1 sigma error associated with above.
 #  instrmag: Instrumental magnitude, 2.5*log10(residual_aperture_sum / exposure time in s)
+#  instrmag_err: 1 sigma error associated with above.
 #  alt: altitude of star, in degrees (0 = horizon, 90 = zenith)
 #
 # Modification History
+# 2018-07-11 JRK: Assuming each pixel has error approximately equal to sqrt(N),
+#                 determine error in aperture sums and instrumental magnitudes.
 # 2018-07-10 JRK: Require a peak signal/background ratio of 3.0 for sources
 #                 detected by astrometry.net to be used for photometry.
 #                 Plotting modifications; save FWHM modeling results to PDF.
@@ -243,7 +247,7 @@ for f in files.files:
         row['source_fwhm']=2.35*np.mean([g_result.x_stddev.value,g_result.y_stddev.value])
     pdf.savefig()
     pdf.close()
-    print pdffile
+    # print pdffile
 
     print 'Source FWHM, Min: ',np.min(result['source_fwhm']),', Max: ',np.max(result['source_fwhm'])
     print 'Using median: ',np.median(result['source_fwhm'])
@@ -272,12 +276,18 @@ for f in files.files:
     bkg_sum=bkg_mean*apertures.area()
     final_sum=phot_table['aperture_sum_0']-bkg_sum
     phot_table['residual_aperture_sum']=final_sum
+    # Based on error propagation calculation by Nicole.
+    phot_table['residual_aperture_sum_err']=np.sqrt(phot_table['aperture_sum_err_0']**2+(apertures.area()/annulus_apertures.area()*phot_table['aperture_sum_err_1'])**2)
     # Put this in instrumental magnitude.
     phot_table['instrmag']=2.5*np.log10(phot_table['residual_aperture_sum']/hdu[0].header['EXPTIME'])
+    # Based on error propagation calculation by Nicole.
+    phot_table['instrmag_err']=1.085*phot_table['residual_aperture_sum_err']/phot_table['residual_aperture_sum']
     
-    # Add this to the results table. 
+    # Add this to the results table. Add errors as well.
     result['residual_aperture_sum']=phot_table['residual_aperture_sum']*u.ct
+    result['residual_aperture_sum_err']=phot_table['residual_aperture_sum_err']*u.ct
     result['instrmag']=phot_table['instrmag']*u.mag
+    result['instrmag_err']=phot_table['instrmag_err']*u.mag
     
     # Getting altitude --> zenith angle --> airmass. 
     c = coords.SkyCoord(result['source_RA'],result['source_DEC'], frame='icrs')
