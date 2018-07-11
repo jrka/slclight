@@ -1,0 +1,2 @@
+|           RA |          DEC |  Vmag |         Source | idx | source_x | source_y | source_peak |     source_RA |     source_DEC |   source_fwhm | residual_aperture_sum | residual_aperture_sum_err |     instrmag |     instrmag_err |           alt |
+| 299.93405965 | -35.27624433 |  4.37 | I/239/hip_main |   5 |  609.979 |  271.431 |     25918.9 | 299.917133552 | -35.2549695889 | 1.13254844072 |         61990.2526857 |              519.36546757 | 9.7230835491 | 0.00909032481559 | 13.6802888584 |
