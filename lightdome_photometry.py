@@ -35,6 +35,8 @@
 #  alt: altitude of star, in degrees (0 = horizon, 90 = zenith)
 #
 # Modification History
+# 2018-07-12 JRK: If 'photometry' directory doesn't exist, make it.
+#                 Set s/n cutoff in variable sncutoff (hardcode).
 # 2018-07-11 JRK: Assuming each pixel has error approximately equal to sqrt(N),
 #                 determine error in aperture sums and instrumental magnitudes.
 # 2018-07-10 JRK: Require a peak signal/background ratio of 3.0 for sources
@@ -76,11 +78,16 @@ dirname=sys.argv[1]
 # dirname='lightdome_timpanogos'
 dir='./data/'+dirname+'/'
 
+sncutoff=3.0
+
 ###################### READ IN FILE INFO
 
 # Find all science images in the "astrometry" folder.
 # Exclude the _axy files.
 files=ImageFileCollection(dir+'/astrometry/',glob_exclude='*axy*')
+
+# If 'photometry' directory doesn't already exist, make it.
+if not os.path.exists(dir+'/photometry/'): os.mkdir(dir+'/photometry/')
 
 ###################### READ IN FILE INFO
 for f in files.files:
@@ -97,10 +104,10 @@ for f in files.files:
     # Do the cut here for sources that are very high signal to noise.
     # Note, this is just the signal of the peak pixel; not the total
     # integrated flux of the star. Use a S/N cut of 3.0 here.
-    indsn=np.where(hdu[1].data['flux']/hdu[1].data['background']>3.0)
+    indsn=np.where(hdu[1].data['flux']/hdu[1].data['background']>sncutoff)
     positions=[hdu[1].data['X'][indsn],hdu[1].data['Y'][indsn]]
     source_peak=hdu[1].data['flux'][indsn]
-    print 'Using a peak flux/background cutoff of 3.0 , now ',len(source_peak),' sources.'
+    print 'Using a peak flux/background cutoff of ',str(sncutoff),' , now ',len(source_peak),' sources.'
     hdu.close()
     
     if len(source_peak)==0:

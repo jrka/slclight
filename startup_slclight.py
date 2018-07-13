@@ -33,6 +33,7 @@ from astropy.io import fits
 import ccdproc
 import sys
 from matplotlib.backends.backend_pdf import PdfPages
+import os
 
 
 ###########
