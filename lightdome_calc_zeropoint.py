@@ -19,6 +19,7 @@ from startup_slclight import *
 from astropy.io import ascii
 from astropy.table import vstack
 import glob
+from math import sqrt
 from math import pi
 from scipy import stats
 
@@ -57,29 +58,44 @@ cos_zenith=np.cos(zenith_ang)
 sec_zenith=1/(cos_zenith)
 airmass= sec_zenith
 data['airmass']= airmass
-airmass_threshold= np.where(airmass<=4)
+airmass_threshold= np.where(abs(airmass)<=4)
 data=data[airmass_threshold]
-airmass= data['airmass']
-
 
 
 # 4) Plot: on horizontal axis, airmass. On vertical axis, the sum 
 #    of the catalog magnitude + instrumental magnitude.
-numpy_vmag=np.array(data['Vmag'])
-numpy_instrmag=np.array(data['instrmag'])
-magnitudes = (numpy_vmag + numpy_instrmag)
+#  	 We still need code that takes all the nan values, if any.
+
+numpy_instrmag= np.array(data['instrmag'])
+instrmag_nonan= np.where(~np.isnan(numpy_instrmag))
+data= data[instrmag_nonan]
+numpy_vmag= np.array(data['Vmag'])
+numpy_instrmag= data['instrmag']
+magnitudes= (numpy_vmag + numpy_instrmag)
 data['magnitudes']= magnitudes
-plt.scatter(airmass,magnitudes, color='c', s=10)
+mag_threshold= np.where(10<magnitudes)
+data= data[mag_threshold]
+magnitudes= data['magnitudes']
+instrmag_err = data['instrmag_err']
+airmass= data['airmass']
+
+plt.scatter(airmass,magnitudes, color='c', s=10, label=None)
+plt.errorbar(airmass,magnitudes,yerr=instrmag_err, ls='None', capsize=2, label=None)
 plt.xlabel('Airmass')
 plt.ylabel('Magnitudes')
 plt.title('Instrumental Zero Point')
+plt.show()
 
 
 # 5) Use a built-in package to find the best-fit line: we need to know
 #    the parameters (slope, intercept) and their errors. 
-# 	We might still need code that takes all the nan values, if any.
-slope, intercept, r_value, p_value, std_err = stats.linregress(airmass,magnitudes)
-r_squared = r_value**2
+
+#warnings.simplefilter('ignore', np.RankWarning)
+best_fit, cov = np.polyfit(airmass,magnitudes,1,full=False, w=(1.0/instrmag_err), cov=True)
+slope= best_fit[0]
+intercept= best_fit[1]
+err_slope= sqrt(cov[0][0])
+err_intercept= sqrt(cov[1][1])
 
  
 # 6) Add the best-fit line onto the plot.
@@ -88,21 +104,23 @@ x= np.array(range(0,5))
 y= slope*x+intercept
 
 
-plt.plot(x,y, color='k', label='y= %fx + %f\nR^2=%f' %(slope,intercept,r_squared))
-plt.scatter(airmass,magnitudes, color='c', s=10)
+plt.plot(x,y, color='k', label='$\mathbf{y= %.3fx }\pm %.3f \mathbf{+ %.3f }\pm %.3f$' %(slope, err_slope, intercept, err_intercept))
+plt.scatter(airmass,magnitudes, color='c', s=10, label=None)
+plt.errorbar(airmass,magnitudes,yerr=instrmag_err, ls='None', capsize=2, label=None)
 plt.xlabel('Airmass')
 plt.ylabel('Magnitudes')
-plt.title('Instrumental Zero Point')
+plt.title('Instrumental Zero Point with Error')
 plt.legend()
 plt.show()
 
 
 # 7) Save the plot as a .png file.
-plt.plot(x,y, color='k', label='y= %fx + %f\nR^2=%f' %(slope,intercept,r_squared))
-plt.scatter(airmass,magnitudes, color='c', s=10)
+plt.plot(x,y, color='k', label='$\mathbf{y= %.3fx }\pm %.3f \mathbf{+ %.3f }\pm %.3f$' %(slope, err_slope, intercept, err_intercept))
+plt.scatter(airmass,magnitudes, color='c', s=10, label=None)
+plt.errorbar(airmass,magnitudes,yerr=instrmag_err, ls='None', capsize=2, label=None)
 plt.xlabel('Airmass')
 plt.ylabel('Magnitudes')
-plt.title('Instrumental Zero Point')
+plt.title('Instrumental Zero Point with Error')
 plt.legend()
 plt.savefig(dir+'zeropoint.png')
 
@@ -110,6 +128,10 @@ plt.savefig(dir+'zeropoint.png')
 # 8) Somehow save the fit results (slope, intercept) into a text file that can then be 
 #    added to git and read in with future python scripts.
 
+text = open(dir+'zeropoint_information.txt','w+')
+text.write("Atmospheric extinction coefficient in magnitudes per airmass (k) = %.3f +/- %.3f "%(slope, err_slope))
+text.write("Instrument photometric calibration constant (C) = %.3f +/- %.3f "%(intercept, err_intercept))
+text.close()
 
 
 
