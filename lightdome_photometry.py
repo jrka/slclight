@@ -35,6 +35,7 @@
 #  alt: altitude of star, in degrees (0 = horizon, 90 = zenith)
 #
 # Modification History
+# 2018-07-23 JRK: Exclude sources that are too close to the edge of the image.
 # 2018-07-16 JRK: Exclude possibly satured pixels (hardcode limit).
 #                 Remove sources that are too close together (overlapping).
 # 2018-07-12 JRK: If 'photometry' directory doesn't exist, make it.
@@ -75,7 +76,7 @@ if len(sys.argv)<2:
     print('Usage:\npython lightdome_photometry.py lightdome_NAME_folder [pixels] \n')
     exit()
 npix=np.float(sys.argv[2]) if len(sys.argv)==3 else 1.0 # npix = required 
-# npix=1.0
+#npix=1.0
 #  distance between catalog and astromety.net sources to consider them a match.
     
 dirname=sys.argv[1]
@@ -119,8 +120,7 @@ for f in files.files:
     indsat=np.where(source_peak<0.9*saturated)
     positions=[positions[0][indsat],positions[1][indsat]]
     source_peak=source_peak[indsat]
-    print 'Excluding peaks above ',str(0.9*saturated),' , now ',len(source_peak),' sources.'    
-    
+    print 'Excluding peaks above ',str(0.9*saturated),' , now ',len(source_peak),' sources.'  
     hdu.close()
     
     if len(source_peak)==0:
@@ -131,6 +131,12 @@ for f in files.files:
     hdu=fits.open(dir+'/astrometry/'+f)
     wcs=WCS(hdu[0].header)
     data=hdu[0].data
+    # Exclude sources that are too close to the edges (5 pixels; used for FWHM fitting)
+    indedge=np.where(np.logical_and(np.logical_and(np.logical_and(positions[0]>5,positions[0]<len(data[0,:])-5),positions[1]>5),positions[1]<len(data[:,0])-5))
+    positions=[positions[0][indedge],positions[1][indedge]]
+    source_peak=source_peak[indedge]
+    print 'Excluding sources too close to edge of image, now ',len(source_peak),' sources.'  
+    
     # Also grab the pixel scale. This little routine is in startup_slclight.py.
     pixscale=platescale(hdu[0].header)
     # Perhaps we should narrow down to our standard stars now at this point,

@@ -9,8 +9,12 @@
 # python lightdome_photometry.py lightdome_timpanogos
 #
 # MODIFICATION HISTORY
-# 2018-07-02 JRK: Commented template file made.
+# 2018-07-23 JRK: Commented out some unnecessary plotting lines.
+#                 Impose a signal/noise cut (of only 1.0) to remove
+#                 points with extreme error bars.
+#                 Do first once, remove 2 sigma outliers, then fit again.
 # 2018-07-05 NRC: Calculated airmass and created scatter plot.
+# 2018-07-02 JRK: Commented template file made.
 #
 #
 
@@ -29,7 +33,7 @@ from scipy import stats
 #    print('Usage:\npython lightdome_calc_zeropoint.py [lightdome_NAME folder] \n')
 #    exit()
 # dir='./data/'+sys.argv[2]+'/'
-dir='./data/lightdome_timpanogos/' # Just hard-code for now.
+dir='./data/lightdome_westminster/' # Just hard-code for now.
 
 # 1) Create a list of all the files in dir+'/photometry/'
 #    using a tool like glob. Don't forget to import it.
@@ -47,6 +51,7 @@ for f in files:
     else:
         data=vstack([data,tmp])
 
+print len(data)
 
 # 3) Create a new column that calculates airmass. Note 
 #    that usually you see a formula for airmass as a function of zenith angle,
@@ -61,10 +66,14 @@ data['airmass']= airmass
 airmass_threshold= np.where(abs(airmass)<=4)
 data=data[airmass_threshold]
 
+print len(data),' after airmass threshold'
 
 # 4) Plot: on horizontal axis, airmass. On vertical axis, the sum 
 #    of the catalog magnitude + instrumental magnitude.
 #  	 We still need code that takes all the nan values, if any.
+
+# Include a signal/noise threshold?
+data=data[np.where(data['instrmag']/data['instrmag_err']>1.0)]
 
 numpy_instrmag= np.array(data['instrmag'])
 instrmag_nonan= np.where(~np.isnan(numpy_instrmag))
@@ -73,14 +82,16 @@ numpy_vmag= np.array(data['Vmag'])
 numpy_instrmag= data['instrmag']
 magnitudes= (numpy_vmag + numpy_instrmag)
 data['magnitudes']= magnitudes
-mag_threshold= np.where(10<magnitudes)
-data= data[mag_threshold]
-magnitudes= data['magnitudes']
+# mag_threshold= np.where(10<magnitudes)  # Removed; this was trying out a special case?
+# data= data[mag_threshold]
+# magnitudes= data['magnitudes']
 instrmag_err = data['instrmag_err']
 airmass= data['airmass']
 
-plt.scatter(airmass,magnitudes, color='c', s=10, label=None)
-plt.errorbar(airmass,magnitudes,yerr=instrmag_err, ls='None', capsize=2, label=None)
+#plt.scatter(airmass,magnitudes, color='c', s=10, label=None)
+plt.clf()
+plt.errorbar(airmass,magnitudes,yerr=instrmag_err, ls='None', capsize=2, label=None,
+   marker='o',markersize=3) # I added markers to "errorbar", so no need to call "scatter"
 plt.xlabel('Airmass')
 plt.ylabel('Magnitudes')
 plt.title('Instrumental Zero Point')
@@ -97,31 +108,48 @@ intercept= best_fit[1]
 err_slope= sqrt(cov[0][0])
 err_intercept= sqrt(cov[1][1])
 
+# Add this original line to graph, dotted.
+x= np.array(range(0,4))
+y= slope*x+intercept
+plt.plot(x,y, color='k', linestyle=':',label='$\mathbf{y= %.3fx }\pm %.3f \mathbf{+ %.3f }\pm %.3f$' %(slope, err_slope, intercept, err_intercept))
+
+# 5b) Remove 2 sigma outliers, redo the fit.
+model=airmass*slope+intercept
+diff=magnitudes-model
+outlier_mask=np.logical_or(diff>np.median(diff)+2.0*np.std(diff),diff<np.median(diff)-2.0*np.std(diff))
+plt.errorbar(airmass[outlier_mask],magnitudes[outlier_mask],yerr=instrmag_err[outlier_mask],
+    ls='None',capsize=2,label='Excluded as Outliers',marker='o',markersize=3,color='r')
+
+best_fit, cov = np.polyfit(airmass[~outlier_mask],magnitudes[~outlier_mask],1,full=False, w=(1.0/instrmag_err[~outlier_mask]), cov=True)
+slope= best_fit[0]
+intercept= best_fit[1]
+err_slope= sqrt(cov[0][0])
+err_intercept= sqrt(cov[1][1])
+
  
 # 6) Add the best-fit line onto the plot.
 # Why when our x range is till five it graphs till 4?
 x= np.array(range(0,5))
 y= slope*x+intercept
 
-
 plt.plot(x,y, color='k', label='$\mathbf{y= %.3fx }\pm %.3f \mathbf{+ %.3f }\pm %.3f$' %(slope, err_slope, intercept, err_intercept))
-plt.scatter(airmass,magnitudes, color='c', s=10, label=None)
-plt.errorbar(airmass,magnitudes,yerr=instrmag_err, ls='None', capsize=2, label=None)
-plt.xlabel('Airmass')
-plt.ylabel('Magnitudes')
-plt.title('Instrumental Zero Point with Error')
+#plt.scatter(airmass,magnitudes, color='c', s=10, label=None) # No need to plot, relabel again.
+#plt.errorbar(airmass,magnitudes,yerr=instrmag_err, ls='None', capsize=2, label=None)
+#plt.xlabel('Airmass')
+#plt.ylabel('Magnitudes')
+#plt.title('Instrumental Zero Point with Error')
 plt.legend()
 plt.show()
 
 
 # 7) Save the plot as a .png file.
-plt.plot(x,y, color='k', label='$\mathbf{y= %.3fx }\pm %.3f \mathbf{+ %.3f }\pm %.3f$' %(slope, err_slope, intercept, err_intercept))
-plt.scatter(airmass,magnitudes, color='c', s=10, label=None)
-plt.errorbar(airmass,magnitudes,yerr=instrmag_err, ls='None', capsize=2, label=None)
-plt.xlabel('Airmass')
-plt.ylabel('Magnitudes')
-plt.title('Instrumental Zero Point with Error')
-plt.legend()
+# plt.plot(x,y, color='k', label='$\mathbf{y= %.3fx }\pm %.3f \mathbf{+ %.3f }\pm %.3f$' %(slope, err_slope, intercept, err_intercept))
+# plt.scatter(airmass,magnitudes, color='c', s=10, label=None)
+# plt.errorbar(airmass,magnitudes,yerr=instrmag_err, ls='None', capsize=2, label=None)
+# plt.xlabel('Airmass')
+# plt.ylabel('Magnitudes')
+# plt.title('Instrumental Zero Point with Error')
+# plt.legend()
 plt.savefig(dir+'zeropoint.png')
 
 
