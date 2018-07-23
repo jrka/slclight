@@ -14,8 +14,10 @@ from matplotlib.patches import Rectangle,Wedge,Polygon
 from collections import OrderedDict
 
 # SET IMAGE PROPERTIES: WIDTH IN DEGREES AND HEIGHT IN DEGREES
-width=28.14
-height=18.76
+#width=28.14
+#height=18.76
+width=11.26
+height=7.5
 
 # Determine number of images required around the horizon, and their overlap.
 # Round up.

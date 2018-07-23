@@ -35,6 +35,8 @@
 #  alt: altitude of star, in degrees (0 = horizon, 90 = zenith)
 #
 # Modification History
+# 2018-07-16 JRK: Exclude possibly satured pixels (hardcode limit).
+#                 Remove sources that are too close together (overlapping).
 # 2018-07-12 JRK: If 'photometry' directory doesn't exist, make it.
 #                 Set s/n cutoff in variable sncutoff (hardcode).
 # 2018-07-11 JRK: Assuming each pixel has error approximately equal to sqrt(N),
@@ -72,13 +74,18 @@ from mpl_toolkits.mplot3d import Axes3D
 if len(sys.argv)<2:
     print('Usage:\npython lightdome_photometry.py lightdome_NAME_folder [pixels] \n')
     exit()
-npix=np.float(sys.argv[2]) if len(sys.argv)==3 else 1.0
+npix=np.float(sys.argv[2]) if len(sys.argv)==3 else 1.0 # npix = required 
+# npix=1.0
+#  distance between catalog and astromety.net sources to consider them a match.
     
 dirname=sys.argv[1]
-# dirname='lightdome_timpanogos'
+#dirname='lightdome_westminster'
 dir='./data/'+dirname+'/'
 
-sncutoff=3.0
+# Some hard-coded values that user may wish to change.
+sncutoff=3.0     # Minimum requirement for S/N of peak/background of course to include.
+saturated=65535  # CCD limit; saturated. Peaks above 90% of this value will not be included.
+npix_dup=5       # Number of pixels required between catalog sources.
 
 ###################### READ IN FILE INFO
 
@@ -108,6 +115,12 @@ for f in files.files:
     positions=[hdu[1].data['X'][indsn],hdu[1].data['Y'][indsn]]
     source_peak=hdu[1].data['flux'][indsn]
     print 'Using a peak flux/background cutoff of ',str(sncutoff),' , now ',len(source_peak),' sources.'
+    # Now exclude saturated pixels.
+    indsat=np.where(source_peak<0.9*saturated)
+    positions=[positions[0][indsat],positions[1][indsat]]
+    source_peak=source_peak[indsat]
+    print 'Excluding peaks above ',str(0.9*saturated),' , now ',len(source_peak),' sources.'    
+    
     hdu.close()
     
     if len(source_peak)==0:
@@ -149,7 +162,25 @@ for f in files.files:
     if not result:
         print 'No standard stars found for ',f,', moving on to next file'
         continue # Skips the rest of this file, continues the loop to the next file.
+        
+    # Put the RA and Dec from "result" into x,y position in image.
+    # NOTE that catalog.to_pixel(wcs) seems to give more accurate results
+    # then wcs.wcs_world2pix. 
+  # Commented out by JRK for testing 7/17/18
+  #  catalog=coords.SkyCoord(ra=result['RA'],dec=result['DEC'],unit=u.deg)
+  #  result['x'],result['y']=catalog.to_pixel(wcs)
+  #  apertures_catalog_2=CircularAperture([result['x'],result['y']],r=7)
+  #  apertures_catalog_2.plot(color='green',lw=1.5,alpha=0.5)
     
+    # Check for sources very close together (not distinguished in our images)
+    # JRK Commented out for testing 7/17/18
+    result=remove_close_sources(result,npix_dup*pixscale)
+    if len(result)<1:
+        print 'Only standard stars in image are too close together.'
+        continue # Skips the rest of this file, continues the loop to the next file.        
+    
+    # JRK 7/17/18 Visualize the sources and the catalog sources.
+
     # Put these coordinates into WCS
     catalog=coords.SkyCoord(ra=result['RA'],dec=result['DEC'],unit=u.deg)
     print len(catalog),' sources in catalog'
@@ -259,6 +290,7 @@ for f in files.files:
     print 'Source FWHM, Min: ',np.min(result['source_fwhm']),', Max: ',np.max(result['source_fwhm'])
     print 'Using median: ',np.median(result['source_fwhm'])
     apr=3.0*np.mean(result['source_fwhm'])
+
     # Create the apertures of sources, with local background subtraction
     # NOTE FOR FUTURE REFERENCE: See Mommert 2017 for a discussion of
     # finding the optimum aperture radius using a curve of growth analysis

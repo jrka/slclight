@@ -1,0 +1,30 @@
+# LIGHTDOME OBSERVING METADATA FILE
+# Use this file to record the information associated with a lightdome observation.
+# Lines beginning with "#" are commented out and will not be read.
+# You must follow this template, as the code will read associate each line with 
+# a certain piece of data.
+#
+# 1) Site Name
+Westminster College Dumke Field, Salt Lake City
+# 2) Latitude (in degrees North)
+40.73778
+# 3) Longitude (in degrees East)
+-111.87111
+# 4) Elevation (in meters)
+1340.0
+# 5) Date UTC in YYYY-MM-DD format
+2018-07-13
+# 6) Time UTC in HH:MM format, 4:45 to 7:55
+06:30
+# 7) Camera
+SBIG STF-0402
+# 8) Lens
+Nikon 35mm f/2
+# 9) Observers
+Nicole Rodriguez Cavero, Julia Kamenetzky, Chris Cline
+# 10) Air Temp (in degrees celsius)
+26.11
+# 11) Zenith SQM reading (magnitudes per square arcsecond)
+18.2
+# 12) Comments (string; must be one line)
+Small FOV, limiting to above about 30 deg altitude.
