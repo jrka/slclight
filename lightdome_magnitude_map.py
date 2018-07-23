@@ -115,8 +115,8 @@ for f in files.files:
 	
 	# If the magnitude is nan then it is not within the picture, delete line on the array:
 	grid = griddata(np.transpose([r['x'],r['y']]), r['Sky_Brightness'], (grid_x, grid_y), method='linear')
-	grid_nonan= (~np.isnan(grid))
-	grid= grid[grid_nonan]
+# 	grid_nonan= (~np.isnan(grid))
+# 	grid= grid[grid_nonan]
 	
 	
 	positions_wcs = wcs.all_pix2world(grid_x,grid_y,1) #Investigate about distortion corrections.
@@ -148,7 +148,7 @@ for f in files.files:
 #        keep a copy saved for future imaging?
 
 	t.write(dir+'/skybrightness/'+f.split('.')[0]+'.txt', format='ascii.fixed_width',overwrite=True)
-	print 'Table %f created' %(i)
+	print 'Table created' #Put table number
 
 #    3f) Compile the results of this file's table with all the other files
 #        tables. See how I did this in the start (step 2) of lightdome_calc_zeropoint.py
