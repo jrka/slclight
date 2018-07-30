@@ -32,8 +32,8 @@ from scipy import stats
 # if len(sys.argv)!=2:
 #    print('Usage:\npython lightdome_calc_zeropoint.py [lightdome_NAME folder] \n')
 #    exit()
-# dir='./data/'+sys.argv[2]+'/'
-dir='./data/lightdome_westminster/' # Just hard-code for now.
+dir='./data/'+sys.argv[1]+'/'
+#dir='./data/lightdome_westminster/' # Just hard-code for now.
 
 # 1) Create a list of all the files in dir+'/photometry/'
 #    using a tool like glob. Don't forget to import it.
@@ -95,7 +95,7 @@ plt.errorbar(airmass,magnitudes,yerr=instrmag_err, ls='None', capsize=2, label=N
 plt.xlabel('Airmass')
 plt.ylabel('Magnitudes')
 plt.title('Instrumental Zero Point')
-plt.show()
+#plt.show()
 
 
 # 5) Use a built-in package to find the best-fit line: we need to know
@@ -139,7 +139,7 @@ plt.plot(x,y, color='k', label='$\mathbf{y= %.3fx }\pm %.3f \mathbf{+ %.3f }\pm 
 #plt.ylabel('Magnitudes')
 #plt.title('Instrumental Zero Point with Error')
 plt.legend()
-plt.show()
+#plt.show()
 
 
 # 7) Save the plot as a .png file.

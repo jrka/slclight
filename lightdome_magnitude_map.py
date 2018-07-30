@@ -32,12 +32,12 @@ from scipy import ndimage
 
 # Set directory. In the future, we'll use the next 4 lines of code
 # so that the user can specify the directory from the command line.
-# if len(sys.argv)!=2:
-#    print('Usage:\npython lightdome_magnitude_map.py [lightdome_NAME folder] \n')
-#    exit()
-#dir='./data/'+sys.argv[1]+'/'
+ if len(sys.argv)!=2:
+    print('Usage:\npython lightdome_magnitude_map.py [lightdome_NAME folder] \n')
+    exit()
+dir='./data/'+sys.argv[1]+'/'
 #dir='./data/lightdome_westminster' # Just hard-code for now.
-dir='./data/lightdome_timpanogos'
+#dir='./data/lightdome_timpanogos'
 
 if not os.path.exists(dir+'/skybrightness/'): os.mkdir(dir+'/skybrightness/')
 
@@ -48,8 +48,7 @@ with open(dir+'/zeropoint_information.txt') as t:
     content= t.readlines()
 C = re.findall("\d+\.\d+", content[1])[0]
 C = float(C)
-#C = 14.762  # DON'T HARDCODE! JULIA, WHY DOESN'T THIS WORK? 14.762 timpanogos
-#C = 14.220 # Westminster
+#C = 14.761  # 14.761 timpanogos, 14.220 Westmisnter
 #Bring the error in too.
 
 # 2) Read in a list of all the light images.
@@ -138,6 +137,7 @@ if not skipread:
         # To determine factor by which we want to downsample... Every 1 degree?
         fov=[magnitude_sky.shape[0]*resolution/3600.0,magnitude_sky.shape[1]*resolution/3600.0] # in degrees
         factor=np.int(np.floor(np.min(fov)))
+        print 'Downsampling ',magnitude_sky.shape,' by factor of ',factor
         #factor=10 # downsample by a factor of 10. Could figure out what this should be based on resolution.
         ys,xs=magnitude_sky.shape
         crarr=magnitude_sky[:ys-(ys % int(factor)),:xs-(xs % int(factor))] # Crops a bit
@@ -205,8 +205,7 @@ for f in files:
     else:
         data = vstack([data,tmp])
 
-#     Take column with nan sky brightness out of the data table.
-
+# Take column with nan sky brightness out of the data table.
 numpy_skybrightness = np.array(data['Sky_Brightness'])
 skybrightness_nonan = np.where(~np.isnan(numpy_skybrightness))
 data = data[skybrightness_nonan]
@@ -231,7 +230,12 @@ plt.clf()
 ax = fig.add_subplot(111,polar='True')
 ax.set_theta_zero_location("N")
 ax.set_theta_direction(-1)
-plt.scatter(data['Azimuth']*180.0/np.pi,90.0-data['Altitude'],s=1,alpha=0.5)
+nfiles=len(np.unique(data['file']))
+#scatcolors = cm.rainbow(np.linspace(0, 1, nfiles))
+scatcolors=['#d7191c','#fdae61','#ffffbf','#abd9e9','#abd939','#2c7bb6']
+for i,f in enumerate(np.unique(data['file'])):
+    inds=np.where(data['file']==f)
+    plt.scatter(data['Azimuth'][inds]*np.pi/180.0,90.0-data['Altitude'][inds],s=1,alpha=0.5,color=scatcolors[i % len(scatcolors)])
 plt.ylim(0,90)
 plt.title(dir+' '+str(len(data))+' downsampled points')
 plt.savefig(dir+'/magnitude_map_coverage.png')
@@ -288,3 +292,19 @@ plt.savefig(dir+'/magnitude_map.png')
 
 # 5) Optional, also create a plot displaying the same information
 #    in the same projection as Duriscoe. (Hammer-Aitoff Projection?)
+
+theta_2 = theta.copy()
+theta_2[np.where(theta>np.pi)] -= 2*np.pi
+
+# Sort all by theta values. Start negative, up to zero, and to positive.
+inds=np.argsort(theta_2[:,0])
+theta_2=theta_2[inds,:]
+rad=rad[inds,:]
+values_2d=values_2d[inds,:]
+
+plt.figure()
+plt.subplot(111,projection='mollweide')
+plt.grid(True)
+plt.pcolormesh(theta_2,(90.0-rad)*np.pi/180.0,values_2d,norm=norm,cmap=cmap)
+plt.colorbar()
+plt.savefig(dir+'/magnitude_map_mollweide.png')
