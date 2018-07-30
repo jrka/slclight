@@ -80,7 +80,7 @@ npix=np.float(sys.argv[2]) if len(sys.argv)==3 else 1.0 # npix = required
 #  distance between catalog and astromety.net sources to consider them a match.
     
 dirname=sys.argv[1]
-#dirname='lightdome_westminster'
+#dirname='lightdome_timpanogos'
 dir='./data/'+dirname+'/'
 
 # Some hard-coded values that user may wish to change.
@@ -200,8 +200,14 @@ for f in files.files:
     plt.savefig(dir+'/photometry/photometry_'+f.split('.')[0]+'.png') 
     
     # Convert our sources to world coordinates.
-    positions_wcs=wcs.wcs_pix2world(positions[0],positions[1],1)
+    positions_wcs=wcs.wcs_pix2world(positions[0],positions[1],1)    
     co=coords.SkyCoord(positions_wcs[0],positions_wcs[1],unit="deg")
+    
+    # TESTING: ARCTURUS
+   # positions_arcturus=wcs.all_pix2world(410,100,1)
+   # co_arcturus=coords.SkyCoord(positions_arcturus[0],positions_arcturus[1],unit="deg")
+   # apertures_arcturus=CircularAperture(co_arcturus.to_pixel(wcs),r=10)
+   # apertures_arcturus.plot(color='green',lw=3,alpha=0.5)
     
     #http://docs.astropy.org/en/stable/coordinates/matchsep.html
     # Now idx are indices into catalog that are the closest objects to each of the 
