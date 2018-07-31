@@ -157,7 +157,7 @@ plt.savefig(dir+'zeropoint.png')
 #    added to git and read in with future python scripts.
 
 text = open(dir+'zeropoint_information.txt','w+')
-text.write("Atmospheric extinction coefficient in magnitudes per airmass (k) = %.3f +/- %.3f "%(slope, err_slope))
+text.write("Atmospheric extinction coefficient in magnitudes per airmass (k) = %.3f +/- %.3f\n"%(slope, err_slope))
 text.write("Instrument photometric calibration constant (C) = %.3f +/- %.3f "%(intercept, err_intercept))
 text.close()
 

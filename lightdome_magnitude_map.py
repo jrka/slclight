@@ -32,9 +32,9 @@ from scipy import ndimage
 
 # Set directory. In the future, we'll use the next 4 lines of code
 # so that the user can specify the directory from the command line.
- if len(sys.argv)!=2:
-    print('Usage:\npython lightdome_magnitude_map.py [lightdome_NAME folder] \n')
-    exit()
+if len(sys.argv)!=2:
+   print('Usage:\npython lightdome_magnitude_map.py [lightdome_NAME folder] \n')
+   exit()
 dir='./data/'+sys.argv[1]+'/'
 #dir='./data/lightdome_westminster' # Just hard-code for now.
 #dir='./data/lightdome_timpanogos'
@@ -48,8 +48,8 @@ with open(dir+'/zeropoint_information.txt') as t:
     content= t.readlines()
 C = re.findall("\d+\.\d+", content[1])[0]
 C = float(C)
-#C = 14.761  # 14.761 timpanogos, 14.220 Westmisnter
-#Bring the error in too.
+C_error = re.findall("\d+\.\d+", content[1])[1]
+C_error = float(C_error)
 
 # 2) Read in a list of all the light images.
 #    This is similar to what was done in lightdome_photometry.py
@@ -78,7 +78,9 @@ if not skipread:
 
         instrmagsky = data/(hdu[0].header['EXPTIME']*resolution_squared)
         log_instrmagsky = np.log10(instrmagsky)
+        log_instrmagsky_error = 0.434*((np.sqrt(data))*(1/(hdu[0].header['EXPTIME']*resolution_squared)))/instrmagsky
         magnitude_sky = C - 2.5*log_instrmagsky
+        magnitude_sky_error = np.sqrt((C_error)**2+ (2.5*log_instrmagsky_error)**2)
     
 
     #    3c) Find the altitude and azimuth associated with each pixel.
@@ -146,6 +148,8 @@ if not skipread:
         grid = np.nanmean(np.concatenate([[crarr[i::factor,j::factor] for i in range(factor)] for j in range(factor)]),axis=0)
         grid_x = np.nanmean(np.concatenate([[xcrarr[i::factor,j::factor] for i in range(factor)] for j in range(factor)]),axis=0)
         grid_y = np.nanmean(np.concatenate([[ycrarr[i::factor,j::factor] for i in range(factor)] for j in range(factor)]),axis=0)
+        crarr_error=magnitude_sky_error[:ys-(ys % int(factor)),:xs-(xs % int(factor))]
+        grid_error=np.nanmean(np.concatenate([[crarr_error[i::factor,j::factor] for i in range(factor)] for j in range(factor)]),axis=0)
     
         # New plot, same colorscale
         im1=ax[1].imshow(grid,cmap=cmap,norm=norm,aspect='equal')
@@ -178,6 +182,7 @@ if not skipread:
             s['Altitude'] = cAltAz.alt[i,:]
             s['Azimuth'] = cAltAz.az[i,:]
             s['Sky_Brightness'] = grid[i,:] # Need to transpose?
+            s['Sky_Brightness_Error'] = grid_error[i,:]
             tmp = s
             if not t:
                 t = s
@@ -208,7 +213,7 @@ for f in files:
 # Take column with nan sky brightness out of the data table.
 numpy_skybrightness = np.array(data['Sky_Brightness'])
 skybrightness_nonan = np.where(~np.isnan(numpy_skybrightness))
-data = data[skybrightness_nonan]
+data = data[skybrightness_nonan] #Is removing nan values still necessary? There seems to be none with the new procedure.
 
 print data
 
@@ -259,6 +264,9 @@ theta,rad=np.meshgrid(theta_list,rad_list,indexing='ij')
 
 values_2d = griddata(np.transpose([data['Azimuth'],90.0-data['Altitude']]), 
     data['Sky_Brightness'], (theta, rad), method='linear') # None, nans on the edges are okay.
+    
+skyerror_numpy = np.array(data['Sky_Brightness_Error'])
+skybrightness_error = np.average(skyerror_numpy)
 
 # UNITS OF THETA ARE IN RADIANS, GENIUS!
 theta=theta*np.pi/180.0
@@ -269,7 +277,7 @@ cmap=mpl.cm.CMRmap_r # This is similar to Duriscoe... check it out? Not quite th
 # They go pink to yellow to dark, ours is the opposite. Can look for more colormaps.
 norm = mpl.colors.Normalize(vmin=np.min(values_2d[~np.isnan(values_2d)]),vmax=np.max(values_2d[~np.isnan(values_2d)]))
 # Use the same normalization each time? 
-#norm = mpl.colors.Normalize(vmin=17.5,vmax=22.25) Ours not nearly as dark.
+#norm = mpl.colors.Normalize(vmin=17.5,vmax=22.25) #Ours not nearly as dark.
 
 fig = plt.figure(num=2)
 plt.clf()
@@ -285,6 +293,7 @@ ax.set_ylim(0,90)
 
 plt.pcolormesh(theta,rad,values_2d,norm=norm,cmap=cmap)
 plt.colorbar()
+plt.text(0.15,0.01,'Reported values are certain to +/- %.2f mag/arcsec^2' %(skybrightness_error), transform= plt.gcf().transFigure)
 plt.title(dir)
 plt.savefig(dir+'/magnitude_map.png')
 #plt.show()
@@ -307,4 +316,6 @@ plt.subplot(111,projection='mollweide')
 plt.grid(True)
 plt.pcolormesh(theta_2,(90.0-rad)*np.pi/180.0,values_2d,norm=norm,cmap=cmap)
 plt.colorbar()
+plt.title(dir)
+plt.text(0.15,0.01,'Reported values are certain to +/- %.2f mag/arcsec^2' %(skybrightness_error), transform= plt.gcf().transFigure)
 plt.savefig(dir+'/magnitude_map_mollweide.png')
