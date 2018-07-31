@@ -138,7 +138,7 @@ if not skipread:
         # https://github.com/keflavich/image_registration/blob/master/image_registration/fft_tools/downsample.py#L11
         # To determine factor by which we want to downsample... Every 1 degree?
         fov=[magnitude_sky.shape[0]*resolution/3600.0,magnitude_sky.shape[1]*resolution/3600.0] # in degrees
-        factor=np.int(np.floor(np.min(fov)))
+        factor=np.int(np.floor(magnitude_sky.shape[0]/fov[0]))
         print 'Downsampling ',magnitude_sky.shape,' by factor of ',factor
         #factor=10 # downsample by a factor of 10. Could figure out what this should be based on resolution.
         ys,xs=magnitude_sky.shape
@@ -148,8 +148,7 @@ if not skipread:
         grid = np.nanmean(np.concatenate([[crarr[i::factor,j::factor] for i in range(factor)] for j in range(factor)]),axis=0)
         grid_x = np.nanmean(np.concatenate([[xcrarr[i::factor,j::factor] for i in range(factor)] for j in range(factor)]),axis=0)
         grid_y = np.nanmean(np.concatenate([[ycrarr[i::factor,j::factor] for i in range(factor)] for j in range(factor)]),axis=0)
-        crarr_error=magnitude_sky_error[:ys-(ys % int(factor)),:xs-(xs % int(factor))]
-        grid_error=np.nanmean(np.concatenate([[crarr_error[i::factor,j::factor] for i in range(factor)] for j in range(factor)]),axis=0)
+        grid_error=np.std(np.concatenate([[crarr[i::factor,j::factor] for i in range(factor)] for j in range(factor)]),axis=0)
     
         # New plot, same colorscale
         im1=ax[1].imshow(grid,cmap=cmap,norm=norm,aspect='equal')
@@ -265,6 +264,18 @@ theta,rad=np.meshgrid(theta_list,rad_list,indexing='ij')
 values_2d = griddata(np.transpose([data['Azimuth'],90.0-data['Altitude']]), 
     data['Sky_Brightness'], (theta, rad), method='linear') # None, nans on the edges are okay.
     
+# Don't report interpolated values for a given theta, rad if 
+# our data did not contain information close enough to that point.
+# Calculate great circle distances; theta = azimuth, rad = zenith angle
+# Not ideal to do this as a loop; takes a while. 
+for i in np.arange(len(theta_list)):
+    for j in np.arange(len(rad_list)):
+        # Good for small angles; what we are looking for.
+        angsep=np.sqrt( ((theta_list[i]-data['Azimuth'])*np.cos((90.0-rad_list[j])*np.pi/180.0))**2+
+            ((90.0-rad_list[j])-data['Altitude'])**2) # degrees
+        if np.min(angsep)>1.0: values_2d[i,j]=np.nan
+    print i,' of ',len(theta_list)
+
 skyerror_numpy = np.array(data['Sky_Brightness_Error'])
 skybrightness_error = np.average(skyerror_numpy)
 
