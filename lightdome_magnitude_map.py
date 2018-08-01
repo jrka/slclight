@@ -12,6 +12,7 @@
 #
 
 # Import necessary packages
+from setup_plotting import *
 from startup_slclight import *
 from ccdproc import ImageFileCollection
 import re
@@ -229,9 +230,11 @@ print data
 #values= np.array(data['Sky_Brightness'])
 
 # Plot locations of altitudes, azimuths.
-fig = plt.figure(num=1)
+lfd=latexfd['full']
+fig = plt.figure(num=1,figsize=(lfd['figw'],lfd['figh']))
 plt.clf()
 ax = fig.add_subplot(111,polar='True')
+#fig.subplots_adjust(top=lfd['t'],right=lfd['r'],bottom=lfd['b'],left=lfd['l'])
 ax.set_theta_zero_location("N")
 ax.set_theta_direction(-1)
 nfiles=len(np.unique(data['file']))
@@ -290,9 +293,10 @@ norm = mpl.colors.Normalize(vmin=np.min(values_2d[~np.isnan(values_2d)]),vmax=np
 # Use the same normalization each time? 
 #norm = mpl.colors.Normalize(vmin=17.5,vmax=22.25) #Ours not nearly as dark.
 
-fig = plt.figure(num=2)
+fig = plt.figure(num=2,figsize=(lfd['figw'],lfd['figh']))
 plt.clf()
 ax = fig.add_subplot(111,polar='True')
+#fig.subplots_adjust(top=lfd['t'],right=lfd['r'],bottom=lfd['b'],left=lfd['l'])
 ax.set_theta_zero_location("N")
 ax.set_theta_direction(-1)
 ax.set_ylim(0,90)
@@ -322,8 +326,9 @@ theta_2=theta_2[inds,:]
 rad=rad[inds,:]
 values_2d=values_2d[inds,:]
 
-plt.figure()
+plt.figure(figsize=(lfd['figw'],lfd['figh']))
 plt.subplot(111,projection='mollweide')
+#fig.subplots_adjust(top=lfd['t'],right=lfd['r'],bottom=lfd['b'],left=lfd['l'])
 plt.grid(True)
 plt.pcolormesh(theta_2,(90.0-rad)*np.pi/180.0,values_2d,norm=norm,cmap=cmap)
 plt.colorbar()

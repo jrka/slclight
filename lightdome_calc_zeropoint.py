@@ -19,6 +19,7 @@
 #
 
 # Import necessary packages
+from setup_plotting import *
 from startup_slclight import *
 from astropy.io import ascii
 from astropy.table import vstack
@@ -89,11 +90,14 @@ instrmag_err = data['instrmag_err']
 airmass= data['airmass']
 
 #plt.scatter(airmass,magnitudes, color='c', s=10, label=None)
+lfd=latexfd['full']
+fig = plt.figure(num=0,figsize=(lfd['figw'],lfd['figh']))
 plt.clf()
+fig.subplots_adjust(right=lfd['r'])
 plt.errorbar(airmass,magnitudes,yerr=instrmag_err, ls='None', capsize=2, label=None,
-   marker='o',markersize=3) # I added markers to "errorbar", so no need to call "scatter"
+   marker='o',markersize=2,elinewidth=1.0) # I added markers to "errorbar", so no need to call "scatter"
 plt.xlabel('Airmass')
-plt.ylabel('Magnitudes')
+plt.ylabel('Instrumental Magnitude + Literature Magnitude')
 plt.title('Instrumental Zero Point')
 #plt.show()
 
@@ -111,14 +115,14 @@ err_intercept= sqrt(cov[1][1])
 # Add this original line to graph, dotted.
 x= np.array(range(0,4))
 y= slope*x+intercept
-plt.plot(x,y, color='k', linestyle=':',label='$\mathbf{y= %.3fx }\pm %.3f \mathbf{+ %.3f }\pm %.3f$' %(slope, err_slope, intercept, err_intercept))
+plt.plot(x,y, color='k', marker='None',linestyle=':',label='$\mathbf{y= %.3fx }\pm %.3f \mathbf{+ %.3f }\pm %.3f$' %(slope, err_slope, intercept, err_intercept))
 
 # 5b) Remove 2 sigma outliers, redo the fit.
 model=airmass*slope+intercept
 diff=magnitudes-model
 outlier_mask=np.logical_or(diff>np.median(diff)+2.0*np.std(diff),diff<np.median(diff)-2.0*np.std(diff))
 plt.errorbar(airmass[outlier_mask],magnitudes[outlier_mask],yerr=instrmag_err[outlier_mask],
-    ls='None',capsize=2,label='Excluded as Outliers',marker='o',markersize=3,color='r')
+    ls='None',capsize=2,label='Excluded as Outliers',marker='o',markersize=2,color='r',elinewidth=1)
 
 best_fit, cov = np.polyfit(airmass[~outlier_mask],magnitudes[~outlier_mask],1,full=False, w=(1.0/instrmag_err[~outlier_mask]), cov=True)
 slope= best_fit[0]
@@ -132,7 +136,7 @@ err_intercept= sqrt(cov[1][1])
 x= np.array(range(0,5))
 y= slope*x+intercept
 
-plt.plot(x,y, color='k', label='$\mathbf{y= %.3fx }\pm %.3f \mathbf{+ %.3f }\pm %.3f$' %(slope, err_slope, intercept, err_intercept))
+plt.plot(x,y, color='k', marker=None,label='$\mathbf{y= %.3fx }\pm %.3f \mathbf{+ %.3f }\pm %.3f$' %(slope, err_slope, intercept, err_intercept))
 #plt.scatter(airmass,magnitudes, color='c', s=10, label=None) # No need to plot, relabel again.
 #plt.errorbar(airmass,magnitudes,yerr=instrmag_err, ls='None', capsize=2, label=None)
 #plt.xlabel('Airmass')

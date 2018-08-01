@@ -15,20 +15,21 @@ from matplotlib import rcParams
 from matplotlib.ticker import MaxNLocator  
 import numpy as np
 
-# Fonts
-rcParams['axes.labelsize'] = 9
-rcParams['xtick.labelsize'] = 9  
-rcParams['ytick.labelsize'] = 9 
-rcParams['legend.fontsize'] = 9
-rcParams['axes.titlesize'] = 9 
-rcParams['font.family'] = 'serif'  
-rcParams['font.serif'] = ['Computer Modern Roman']  
-rcParams['text.usetex'] = True  # Get rid of this for plotting that uses underscores for proposal IDs
+# Fonts. 9 is a good size for half-width (one-column) images. 14 for full.
+rcParams['axes.labelsize'] = 14
+rcParams['xtick.labelsize'] = 14  
+rcParams['ytick.labelsize'] = 14
+rcParams['legend.fontsize'] = 14
+rcParams['axes.titlesize'] = 14
+rcParams['font.family'] = 'sans-serif'  
+rcParams['font.sans-serif'] = ['Verdana']  
+#rcParams['text.usetex'] = True  # Get rid of this for plotting that uses underscores for proposal IDs
 
 #print rcParams.keys()
 
 # Line thickness
-rcParams['lines.linewidth']=1.5
+rcParams['axes.linewidth'] = 2
+rcParams['lines.linewidth']=3.0
 rcParams['lines.markeredgewidth']=1
 rcParams['lines.marker']='o'
 rcParams['lines.markersize'] = 3
