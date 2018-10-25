@@ -7,6 +7,7 @@
 # python lightdome_magnitude_map.py lightdome_timpanogos
 #
 # MODIFICATION HISTORY
+# 2018-10-25 JRK: Avoid nans and infs in skybrightness_error and colormap scale.
 # 2018-08-01 JRK: Changed plotting defaults and plot sizes to match full-size latex figures.
 # 2018-07-31 JRK: Corrected downsampling factor.
 # 2018-07-31 NRC: Propagation of error and variability in graphs.
@@ -286,10 +287,10 @@ for i in np.arange(len(theta_list)):
         angsep=np.sqrt( ((theta_list[i]-data['Azimuth'])*np.cos((90.0-rad_list[j])*np.pi/180.0))**2+
             ((90.0-rad_list[j])-data['Altitude'])**2) # degrees
         if np.min(angsep)>1.0: values_2d[i,j]=np.nan
-    print i,' of ',len(theta_list)
+    if np.mod(i,10)==0: print i,' of ',len(theta_list)
 
 skyerror_numpy = np.array(data['Sky_Brightness_Error'])
-skybrightness_error = np.average(skyerror_numpy)
+skybrightness_error = np.nanmean(skyerror_numpy)
 
 # UNITS OF THETA ARE IN RADIANS, GENIUS!
 theta=theta*np.pi/180.0
@@ -298,9 +299,11 @@ theta=theta*np.pi/180.0
 # Define colormap
 cmap=mpl.cm.CMRmap_r # This is similar to Duriscoe... check it out? Not quite the same.
 # They go pink to yellow to dark, ours is the opposite. Can look for more colormaps.
-#norm = mpl.colors.Normalize(vmin=np.min(values_2d[~np.isnan(values_2d)]),vmax=np.max(values_2d[~np.isnan(values_2d)]))
+norm = mpl.colors.Normalize(vmin=np.min(values_2d[np.isfinite(values_2d)]),vmax=np.max(values_2d[np.isfinite(values_2d)]))
 # Use the same normalization each time? 
-norm = mpl.colors.Normalize(vmin=15,vmax=19) #Ours not nearly as dark.
+#norm = mpl.colors.Normalize(vmin=15,vmax=19) 
+#norm = mpl.colors.Normalize(vmin=15,vmax=21) 
+
 
 fig = plt.figure(num=2,figsize=(lfd['figw'],lfd['figh']))
 plt.clf()
