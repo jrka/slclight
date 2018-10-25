@@ -7,9 +7,18 @@
 # python lightdome_magnitude_map.py lightdome_timpanogos
 #
 # MODIFICATION HISTORY
-# 2018-07-25 JRK: A method that works! 
+# 2018-08-01 JRK: Changed plotting defaults and plot sizes to match full-size latex figures.
+# 2018-07-31 JRK: Corrected downsampling factor.
+# 2018-07-31 NRC: Propagation of error and variability in graphs.
+# 2018-07-30 JRK: Revised magnitude coverage map and added Mollweide projection.
+# 2018-07-25 JRK: A method that works: Downsampling by taking mean.
+# 2019-07-23 JRK: Regridding procedure through interpolation.
+# 2018-07-20 NRC: Created table of all Alt-Az-SkyBrightness with loops. We get too many data points!
+# 2018-07-18 NRC: Found the altitude and azimuth associated with each pixel.
+# 2018-07-17 NRC: Converted each image into an array and did the math necessary to transform it to magnitudes/arcsec^2.
+# 2018-07-16 NRC: Read in zero point magnitude and error from the text file. Made a list of all the astrometry images.
 # 2018-07-09 JRK: Commented template file made.
-#
+
 
 # Import necessary packages
 from setup_plotting import *
@@ -244,7 +253,7 @@ for i,f in enumerate(np.unique(data['file'])):
     inds=np.where(data['file']==f)
     plt.scatter(data['Azimuth'][inds]*np.pi/180.0,90.0-data['Altitude'][inds],s=1,alpha=0.5,color=scatcolors[i % len(scatcolors)])
 plt.ylim(0,90)
-plt.title(dir+' '+str(len(data))+' downsampled points')
+#plt.title(dir+' '+str(len(data))+' downsampled points')
 plt.savefig(dir+'/magnitude_map_coverage.png')
 
 # Need to do another regridding to get this on a regular grid?
@@ -289,9 +298,9 @@ theta=theta*np.pi/180.0
 # Define colormap
 cmap=mpl.cm.CMRmap_r # This is similar to Duriscoe... check it out? Not quite the same.
 # They go pink to yellow to dark, ours is the opposite. Can look for more colormaps.
-norm = mpl.colors.Normalize(vmin=np.min(values_2d[~np.isnan(values_2d)]),vmax=np.max(values_2d[~np.isnan(values_2d)]))
+#norm = mpl.colors.Normalize(vmin=np.min(values_2d[~np.isnan(values_2d)]),vmax=np.max(values_2d[~np.isnan(values_2d)]))
 # Use the same normalization each time? 
-#norm = mpl.colors.Normalize(vmin=17.5,vmax=22.25) #Ours not nearly as dark.
+norm = mpl.colors.Normalize(vmin=15,vmax=19) #Ours not nearly as dark.
 
 fig = plt.figure(num=2,figsize=(lfd['figw'],lfd['figh']))
 plt.clf()
@@ -309,7 +318,7 @@ ax.set_ylim(0,90)
 plt.pcolormesh(theta,rad,values_2d,norm=norm,cmap=cmap)
 plt.colorbar()
 plt.text(0.15,0.01,'Reported values are certain to +/- %.2f mag/arcsec^2' %(skybrightness_error), transform= plt.gcf().transFigure)
-plt.title(dir)
+#plt.title(dir)
 plt.savefig(dir+'/magnitude_map.png')
 #plt.show()
 
@@ -326,13 +335,16 @@ theta_2=theta_2[inds,:]
 rad=rad[inds,:]
 values_2d=values_2d[inds,:]
 
+rcParams['axes.labelsize'] = 10
+rcParams['xtick.labelsize'] = 10
+rcParams['ytick.labelsize'] = 10
 plt.figure(figsize=(lfd['figw'],lfd['figh']))
 plt.subplot(111,projection='mollweide')
 #fig.subplots_adjust(top=lfd['t'],right=lfd['r'],bottom=lfd['b'],left=lfd['l'])
 plt.grid(True)
 plt.pcolormesh(theta_2,(90.0-rad)*np.pi/180.0,values_2d,norm=norm,cmap=cmap)
 plt.colorbar()
-plt.title(dir)
+#plt.title(dir)
 plt.text(0.15,0.01,'Reported values are certain to +/- %.2f mag/arcsec^2' %(skybrightness_error), transform= plt.gcf().transFigure)
 plt.savefig(dir+'/magnitude_map_mollweide.png')
 

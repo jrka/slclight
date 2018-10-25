@@ -9,14 +9,19 @@
 # python lightdome_photometry.py lightdome_timpanogos
 #
 # MODIFICATION HISTORY
+
 # 2018-07-23 JRK: Commented out some unnecessary plotting lines.
 #                 Impose a signal/noise cut (of only 1.0) to remove
 #                 points with extreme error bars.
 #                 Do first once, remove 2 sigma outliers, then fit again.
+# 2018-07-13 NRC: Added errors to trend line label and created a text file with the information.
+# 2018-07-12 NRC: Did propagation of error calculations.
+#				  Added error bars to a scatter plot.
+#				  Modified line of best fit so that it takes into consideration the error.
+#				  Got error for the slope and intercept from the covariance matrix of our best fit.
+# 2018-07-06 NRC: Found line of best fit and added trend line to scatter plot.
 # 2018-07-05 NRC: Calculated airmass and created scatter plot.
 # 2018-07-02 JRK: Commented template file made.
-#
-#
 
 # Import necessary packages
 from setup_plotting import *
