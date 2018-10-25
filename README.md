@@ -27,8 +27,8 @@ academic year.
 
 In addition to the citation for the original analysis procedure given
 above (Durscoe et al. 2007), if using this Python code in 
-whole or in part, please cite:
-
+whole or in part, please cite this DOI: 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1471633.svg)](https://doi.org/10.5281/zenodo.1471633)
 
 
 ## Future Goals, Ongoing Work
