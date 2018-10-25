@@ -335,3 +335,4 @@ plt.colorbar()
 plt.title(dir)
 plt.text(0.15,0.01,'Reported values are certain to +/- %.2f mag/arcsec^2' %(skybrightness_error), transform= plt.gcf().transFigure)
 plt.savefig(dir+'/magnitude_map_mollweide.png')
+
