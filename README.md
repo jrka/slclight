@@ -1,7 +1,7 @@
 # slclight
 
 Create a full-sky mosaic of sky brightness (mag/arcsec^2) given all-sky 
-CCD imagery.
+CCD imagery. Contact Julia Kamenetzky at Westminster College for inquiries.
 
 ## Background
 
@@ -22,6 +22,14 @@ as possible templates for their own work. It is designed to work following
 the procedure described below, but may currently contain bugs and 
 content specific to our work. It is not actively maintained during the 
 academic year.
+
+## Citing
+
+In addition to the citation for the original analysis procedure given
+above (Durscoe et al. 2007), if using this Python code in 
+whole or in part, please cite:
+
+
 
 ## Future Goals, Ongoing Work
 - Calculate and present basic statistics of resulting magnitude maps 
@@ -55,7 +63,10 @@ No other information is required in the fits headers (e.g. lat, long, elev).
 
 The routine `plan_targets.py` can create a map of the sky broken up
 into sections depending on the size of your CCD field of view (which will
-depend on the combination of camera and lens).
+depend on the combination of camera and lens). Good coverage can be 
+achieved manually using an inexpensive alt-az mount if degrees are marked
+on the mount. If using a computerized mount system that requires RA and Dec
+for pointing, use `altaz_to_radec.py'.
 
 Somehow, you want to observe CCD images of large portions of the sky,
 with as much coverage as reasonably possible, if not the whole sky.
@@ -123,7 +134,7 @@ The intercept is the instrumental zero point magnitude.
 6. `python lightdome_magnitude_map.py DIRNAME` will read in each image, use the 
 zeropoint magnitude to calculate sky brightness in mag/arcsec^2 for each pixel, 
 and then downsample the image to 1 deg x 1 deg sections. All images will then 
-be combined and presented in an alt-az map.
+be combined and presented in an alt-az map. Currently, color scale is hard-coded.
 
 ## Other Scripts Available
 
@@ -133,4 +144,3 @@ and list of target locations to map the sky. Not a lot of overlap is currently b
 2. `altaz_to_radec.py`: Given an intended altitude and azimuth for pointing, return 
 the current RA and Dec at that location given your location and the current date/time.
 Helpful if observing with a computerized mount control that wants RA and Dec input.
-
